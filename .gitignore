@@ -1,2 +1,6 @@
 /Output/*
 /Temp/*
+/Cert/*.pfx
+/Cred/*.clixml
+/Injection/*
+/InjectionFullyUnattended/*
