@@ -17,3 +17,4 @@
   - [X] Convert to function
   - [ ] Testen
   - [ ] Pester
+* [ ] Validation of $ConfigData inside configuration
