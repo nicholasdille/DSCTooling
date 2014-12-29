@@ -1,0 +1,19 @@
+﻿* [ ] HTTPS Pull Server
+  - [X] Konfiguration
+  - [ ] Testen
+* [ ] Image Preparation
+  - [ ] Inject meta configuration
+  - [ ] Trigger LCM to create Scheduled Tasks
+  - [ ] Import certificate
+* Certificate Management
+  - [X] Create certificate
+  - [X] Import certificate
+* [ ] Sync Pull Server against output directory
+* [X] Add parameters for virtual machines
+* [ ] Support for subdomains with DNS delegation
+* [ ] Test additional domain controller
+* [ ] Validate ConfigData
+* [ ] Encrypted, transferable Password
+  - [X] Convert to function
+  - [ ] Testen
+  - [ ] Pester
