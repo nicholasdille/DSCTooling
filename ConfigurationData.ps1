@@ -41,11 +41,39 @@
                 }
             }
         }
+        @{
+            NodeName              = '1ca1728d-f336-4772-bfa1-90b4758fc7f9'
+            CertificateThumbprint = ''
+            CertificateFile       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert\contoso-sql-01.cer')
+            Roles = @{
+                Computer              = @{
+                    MachineName = 'contoso-sql-01'
+                    DomainName  = 'contoso.com'
+                    Credentials = 'administrator@contoso.com'
+                }
+                VirtualMachine        = @{
+                    State            = 'Off'
+                    VhdxTemplateName = 'HyperV_Gen2_WS12R2U1_20140915.vhdx'
+                    StartupMemory    = 512MB
+                    MinimumMemory    = 512MB
+                    MaximumMemory    = 2048MB
+                    ProcessorCount   = 2
+                    #MACAddress       = ''
+                }
+                PullClient            = @{}
+                SqlStandalone = @{
+                    InstanceName     = 'MSSQLSERVER'
+                    #ServicePassword  = '43}G4t6Kp7hg:Wj'
+                    Credential_Agent = 'Service-Sql-MSSQLSERVER@contoso.com'
+                }
+            }
+        }
     )
 
     Credentials = @{
-        'administrator@demo.dille.name' = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@demo.dille.name.clixml')
-        'administrator@contoso.com'     = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@contoso.com.clixml')
+        'administrator@demo.dille.name'       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@demo.dille.name.clixml')
+        'administrator@contoso.com'           = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@contoso.com.clixml')
+        'Service-Sql-MSSQLSERVER@contoso.com' = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\Service-Sql-MSSQLSERVER@contoso.com.clixml')
     }
 
     MetaConfig = @{
@@ -129,6 +157,21 @@
                 @{ Ensure = 'Present'; Name = 'AD-Domain-Services' }
                 @{ Ensure = 'Present'; Name = 'RSAT-AD-PowerShell' }
                 @{ Ensure = 'Present'; Name = 'RSAT-ADDS-Tools' }
+            )
+        }
+        SqlStandalone = @{
+            SourcePath       = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
+            Credential_Setup = 'administrator@demo.dille.name'
+            Features         = 'SQLENGINE'
+            Collation        = $null
+            WindowsFeatures = @(
+                @{ Ensure = 'Present'; Name = 'NET-Framework-Core' }
+            )
+        }
+        SqlMgmtTools = @{
+            SourcePath = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
+            WindowsFeatures = @(
+                @{ Ensure = 'Present'; Name = 'NET-Framework-Core'; Source = '\\demo.dille.name\storage\install\Microsoft\Windows Server 2012 R2\WS12R2U1NovEN\sources\SxS' }
             )
         }
     }

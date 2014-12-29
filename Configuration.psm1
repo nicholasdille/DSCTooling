@@ -7,6 +7,7 @@
     Import-DscResource -ModuleName xHyper-V
     Import-DscResource -ModuleName xActiveDirectory
     Import-DscResource -ModuleName xRemoteDesktopAdmin
+    Import-DscResource -ModuleName xSqlServer
     #endregion
  
     Node $AllNodes.NodeName {
@@ -267,6 +268,67 @@
             }
         }
         #endregion
+
+        #region Role SQL Server
+        if ($Node.Roles.Keys -icontains 'SqlStandalone') {
+            $RoleSql = $ConfigurationData.Roles.SqlStandalone
+            $NodeSql = $Node.Roles.SqlStandalone
+
+            <#xADUser ('Service-Sql-' + $NodeSql.InstanceName) {
+                DomainName = $Node.DomainName
+                DomainAdministratorCredential = $domainCred
+                UserName = 'Service-Sql-' + $NodeSql.InstanceName
+                Password = $NodeSql.ServicePassword
+                Ensure = "Present"
+            }#>
+            
+            xSqlServerSetup SqlSetup {
+                InstanceName        = $NodeSql.InstanceName
+                PID                 = $RoleSql.ProductKey
+                SetupCredential     = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Setup])
+                SourcePath          = $RoleSql.SourcePath
+                AgtSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
+                ErrorReporting      = $False
+                Features            = $RoleSql.Features
+                #SecurityMode        = ''
+                #SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_SA])
+                SQLCollation        = $RoleSql.Collation
+                SQLSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
+                SQLSysAdminAccounts = ('CONTOSO\XXX')
+                #SourceFolder         = ''
+                #SQMReporting        = $False
+                #UpdateEnabled       = ''
+                #UpdateSource        = ''
+                #InstallSharedDir    = ''
+                #InstallSharedWOWDir = ''
+                #InstallSQLDataDir   = ''
+                #InstanceDir         = ''
+                #SQLTempDBDir         = ''
+                #SQLTempDBLogDir      = ''
+                #SQLUserDBDir         = ''
+                #SQLUserDBLogDir      = ''
+                #SQLBackupDir         = ''
+                DependsOn            = ('[WindowsFeature]NET-Framework-Core'<#, '[xADUser]Service-Sql-' + $NodeSql.InstanceName#>)
+            }
+
+            xSqlServerFirewall SqlFirewall {
+                #
+            }
+        }
+        #endregion
+
+        if ($Node.Roles.Keys -icontains 'SqlMgmtTools') {
+            $RoleSql = $ConfigurationData.Roles.SqlMgmtTools
+            $NodeSql = $Node.Roles.SqlMgmtTools
+            
+            xSqlServerSetup SQLMT {
+                SourcePath      = $RoleSql.SourcePath
+                SetupCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Setup])
+                InstanceName    = 'NULL'
+                Features        = 'SSMS,ADV_SSMS'
+                DependsOn       = '[WindowsFeature]NET-Framework-Core'
+            }
+        }
 
         #region LocalConfigurationManager
 
