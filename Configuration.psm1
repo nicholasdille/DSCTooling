@@ -273,16 +273,17 @@
         if ($Node.Roles.Keys -icontains 'SqlStandalone') {
             $RoleSql = $ConfigurationData.Roles.SqlStandalone
             $NodeSql = $Node.Roles.SqlStandalone
+            $NodeComputer = $Node.Roles.Computer
 
             <#xADUser ('Service-Sql-' + $NodeSql.InstanceName) {
-                DomainName = $Node.DomainName
-                DomainAdministratorCredential = $domainCred
-                UserName = 'Service-Sql-' + $NodeSql.InstanceName
-                Password = $NodeSql.ServicePassword
-                Ensure = "Present"
+                DomainName                    = $NodeComputer.DomainName
+                DomainAdministratorCredential = $NodeComputer.Credentials
+                UserName                      = 'Service-Sql-' + $NodeSql.InstanceName
+                Password                      = $NodeSql.ServicePassword
+                Ensure                        = 'Present'
             }#>
             
-            xSqlServerSetup SqlSetup {
+            xSqlServerSetup ('SqlSetup_' + $NodeSql.InstanceName) {
                 InstanceName        = $NodeSql.InstanceName
                 PID                 = $RoleSql.ProductKey
                 SetupCredential     = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Setup])
@@ -294,7 +295,7 @@
                 #SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_SA])
                 SQLCollation        = $RoleSql.Collation
                 SQLSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
-                SQLSysAdminAccounts = ('CONTOSO\XXX')
+                SQLSysAdminAccounts = $RoleSql.Admins + $NodeSql.Admins
                 #SourceFolder         = ''
                 #SQMReporting        = $False
                 #UpdateEnabled       = ''
@@ -311,8 +312,11 @@
                 DependsOn            = ('[WindowsFeature]NET-Framework-Core'<#, '[xADUser]Service-Sql-' + $NodeSql.InstanceName#>)
             }
 
-            xSqlServerFirewall SqlFirewall {
-                #
+            xSqlServerFirewall ('SqlFirewall' + $NodeSql.InstanceName) {
+                SourcePath   = $RoleSql.SourcePath
+                InstanceName = $NodeSql.InstanceName
+                Features     = $RoleSql.Features
+                DependsOn    = ('[xSqlServerSetup]SqlSetup_' + $NodeSql.InstanceName)
             }
         }
         #endregion

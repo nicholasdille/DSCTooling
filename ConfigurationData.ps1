@@ -65,6 +65,7 @@
                     InstanceName     = 'MSSQLSERVER'
                     #ServicePassword  = '43}G4t6Kp7hg:Wj'
                     Credential_Agent = 'Service-Sql-MSSQLSERVER@contoso.com'
+                    Admins           = ('CONTOSO\Sql-Admins')
                 }
             }
         }
@@ -164,6 +165,7 @@
             Credential_Setup = 'administrator@demo.dille.name'
             Features         = 'SQLENGINE'
             Collation        = $null
+            #Admins           = ('', '')
             WindowsFeatures = @(
                 @{ Ensure = 'Present'; Name = 'NET-Framework-Core' }
             )
