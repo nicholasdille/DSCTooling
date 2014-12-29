@@ -1,0 +1,2 @@
+https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc/Module(ConfigurationId='9565b711-30c2-43d5-a929-2167955733d3',ModuleName='xActiveDirectory',ModuleVersion='2.1')/ModuleContent
+https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc/Action(ConfigurationId='9565b711-30c2-43d5-a929-2167955733d3')/GetAction
