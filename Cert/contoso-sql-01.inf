@@ -1,5 +1,5 @@
 [NewRequest]
-Subject = "CN=hv-05.demo.dille.name"
+Subject = "CN=contoso-sql-01.demo.dille.name"
 KeySpec = 1
 KeyLength = 2048
 Exportable = TRUE
