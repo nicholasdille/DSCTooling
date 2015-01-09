@@ -1,6 +1,12 @@
-﻿$ModuleFile = (Join-Path -Path $PSScriptRoot -ChildPath 'PSDSC-ResourceDownloader.clixml')
+﻿param(
+    [string]$ResourceUrlCacheFile = (Join-Path -Path $PSScriptRoot -ChildPath 'PSDSC-ResourceDownloader.clixml')
+    ,
+    [switch]$IgnoreCachedUrls = $false
+    ,
+    [switch]$OverwriteExistingModules = $false
+)
 
-if (-Not (Test-Path -Path $ModuleFile)) {
+if (-Not (Test-Path -Path $ResourceUrlCacheFile) -Or $IgnoreCachedUrls) {
     $ModuleList = New-Object System.Collections.ArrayList
 
     $PageList = New-Object System.Collections.Stack
@@ -33,10 +39,10 @@ if (-Not (Test-Path -Path $ModuleFile)) {
         }
     }
 
-    $ModuleList | Export-Clixml -Path $ModuleFile
+    $ModuleList | Export-Clixml -Path $ResourceUrlCacheFile
 
 } else {
-    $ModuleList = Import-Clixml -Path $ModuleFile
+    $ModuleList = Import-Clixml -Path $ResourceUrlCacheFile
 }
 
 Foreach ($ModuleUrl in $ModuleList) {
@@ -48,6 +54,9 @@ Foreach ($ModuleUrl in $ModuleList) {
         $url = $url.Replace('&amp;', '&')
         $url -match '/([^/]+.zip$)' | Out-Null
         $FileName = $Matches[1]
-        Invoke-WebRequest $url -OutFile (Join-Path -Path $PSScriptRoot -ChildPath ('\DSC-Modules\' + $FileName))
+        $FileName = (Join-Path -Path $PSScriptRoot -ChildPath ('\DSC-Modules\' + $FileName))
+        if (-Not (Test-Path -Path $FileName) -Or $OverwriteExistingModules) {
+            Invoke-WebRequest $url -OutFile $FileName
+        }
     }
 }
