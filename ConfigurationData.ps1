@@ -26,13 +26,12 @@
                     MachineName = 'contoso-dc-01'
                 }
                 VirtualMachine        = @{
-                    State            = 'Off'
+                    State            = 'Running'
                     VhdxTemplateName = 'HyperV_Gen2_WS12R2U1_20140915.vhdx'
                     StartupMemory    = 512MB
                     MinimumMemory    = 512MB
                     MaximumMemory    = 2048MB
                     ProcessorCount   = 2
-                    #MACAddress       = ''
                 }
                 PullClient            = @{}
                 FirstDomainController = @{
@@ -43,7 +42,7 @@
         }
         @{
             NodeName              = '1ca1728d-f336-4772-bfa1-90b4758fc7f9'
-            CertificateThumbprint = ''
+            CertificateThumbprint = '2737612A4F20AE4D3AA4079FA7227687DEA9A9A6'
             CertificateFile       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert\contoso-sql-01.cer')
             Roles = @{
                 Computer              = @{
@@ -52,19 +51,19 @@
                     Credentials = 'administrator@contoso.com'
                 }
                 VirtualMachine        = @{
-                    State            = 'Off'
+                    State            = 'Running'
                     VhdxTemplateName = 'HyperV_Gen2_WS12R2U1_20140915.vhdx'
                     StartupMemory    = 512MB
                     MinimumMemory    = 512MB
                     MaximumMemory    = 2048MB
                     ProcessorCount   = 2
-                    #MACAddress       = ''
                 }
                 PullClient            = @{}
                 SqlStandalone = @{
                     InstanceName     = 'MSSQLSERVER'
                     #ServicePassword  = '43}G4t6Kp7hg:Wj'
                     Credential_Agent = 'Service-Sql-MSSQLSERVER@contoso.com'
+                    Credential_SA    = 'sa@contoso-sql-01'
                     Admins           = ('CONTOSO\Sql-Admins')
                 }
             }
@@ -75,6 +74,7 @@
         'administrator@demo.dille.name'       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@demo.dille.name.clixml')
         'administrator@contoso.com'           = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\administrator@contoso.com.clixml')
         'Service-Sql-MSSQLSERVER@contoso.com' = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\Service-Sql-MSSQLSERVER@contoso.com.clixml')
+        'sa@contoso-sql-01'                   = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred\sa@contoso-sql-01.clixml')
     }
 
     MetaConfig = @{

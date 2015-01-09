@@ -44,10 +44,10 @@
         #endregion
 
         #region Remote Desktop
-        xRemoteDesktopAdmin RDP {
+        <#xRemoteDesktopAdmin RDP {
             Ensure = 'Present'
             UserAuthentication = 'Secure'
-        }
+        }#>
         #endregion
 
         #region Wave Deployment
@@ -289,17 +289,17 @@
                 SetupCredential     = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Setup])
                 SourcePath          = $RoleSql.SourcePath
                 AgtSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
-                ErrorReporting      = $False
+                ErrorReporting      = 'False'
                 Features            = $RoleSql.Features
-                #SecurityMode        = ''
-                #SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_SA])
+                SecurityMode        = 'SQL'
+                SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_SA])
                 SQLCollation        = $RoleSql.Collation
                 SQLSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
                 SQLSysAdminAccounts = $RoleSql.Admins + $NodeSql.Admins
                 #SourceFolder         = ''
-                #SQMReporting        = $False
-                #UpdateEnabled       = ''
-                #UpdateSource        = ''
+                #SQMReporting        = 'False'
+                #UpdateEnabled       = 'True'
+                #UpdateSource        = 'MU'
                 #InstallSharedDir    = ''
                 #InstallSharedWOWDir = ''
                 #InstallSQLDataDir   = ''
