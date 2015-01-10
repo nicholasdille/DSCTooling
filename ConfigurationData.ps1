@@ -18,7 +18,8 @@
             }
         }
         @{
-            NodeName              = '9565b711-30c2-43d5-a929-2167955733d3'
+            #NodeName              = '9565b711-30c2-43d5-a929-2167955733d3'
+            NodeName              = 'contoso-dc-01'
             CertificateThumbprint = 'a6e1b663d7cadcb62d49a59bde903e07f9b999be'
             CertificateFile       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert\contoso-dc-01.cer')
             Roles = @{
@@ -33,7 +34,7 @@
                     MaximumMemory    = 2048MB
                     ProcessorCount   = 2
                 }
-                PullClient            = @{}
+                PullClientDebug      = @{}
                 FirstDomainController = @{
                     DomainName  = 'contoso.com'
                     Credentials = 'administrator@contoso.com'
@@ -86,15 +87,26 @@
             RefreshMode                    = 'PULL'
             RefreshFrequencyMins           = 2
             DownloadManagerName            = 'WebDownloadManager'
-            #DownloadManagerCustomData      = @{ServerUrl = 'https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc'}
-            DownloadManagerCustomData      = @{ServerUrl = 'http://hv-04.demo.dille.name:8081/PSDSCPullServer/PSDSCPullServer.svc'; AllowUnsecureConnection = 'True'}
+            DownloadManagerCustomData      = @{ServerUrl = 'https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc'}
+            #DownloadManagerCustomData      = @{ServerUrl = 'http://hv-04.demo.dille.name:8081/PSDSCPullServer/PSDSCPullServer.svc'; AllowUnsecureConnection = 'True'}
         }
         PushClient = @{
             ConfigurationMode              = 'ApplyAndAutoCorrect'
             RebootNodeIfNeeded             = $True
-            RefreshMode                    = 'PULL'
+            RefreshMode                    = 'PUSH'
             RefreshFrequencyMins           = 2
             ConfigurationModeFrequencyMins = 6
+        }
+        PullClientDebug = @{
+            AllowModuleOverwrite           = $True
+            ConfigurationModeFrequencyMins = 6
+            ConfigurationMode              = 'ApplyAndMonitor'
+            RebootNodeIfNeeded             = $False
+            RefreshMode                    = 'PULL'
+            RefreshFrequencyMins           = 2
+            DownloadManagerName            = 'WebDownloadManager'
+            DownloadManagerCustomData      = @{ServerUrl = 'https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc'}
+            #DownloadManagerCustomData      = @{ServerUrl = 'http://hv-04.demo.dille.name:8081/PSDSCPullServer/PSDSCPullServer.svc'; AllowUnsecureConnection = 'True'}
         }
     }
 
