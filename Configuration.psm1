@@ -8,6 +8,7 @@
     Import-DscResource -ModuleName xActiveDirectory
     Import-DscResource -ModuleName xRemoteDesktopAdmin
     Import-DscResource -ModuleName xSqlServer
+    Import-DscResource -ModuleName xNetworking
     #endregion
  
     Node $AllNodes.NodeName {
@@ -21,17 +22,25 @@
             }
             
             if ($NodeComputer.containsKey('DomainName') -And $NodeComputer.containsKey('Credentials')) {
+                xDNSServerAddress DNS {
+                    Address        = ('10.0.0.112')
+                    InterfaceAlias = 'Ethernet 3'
+                    AddressFamily  = 'IPv4'
+                }
+
                 if ($NodeComputer.containsKey('MachineName')) {
                     xComputer RenameComputerAndJoinDomain {
                         Name       = $NodeComputer.MachineName
                         DomainName = $NodeComputer.DomainName
                         Credential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeComputer.Credentials])
+                        DependsOn  = ('[xDNSServerAddress]DNS')
                     }
 
                 } else {
                     xComputer JoinDomain {
                         DomainName = $NodeComputer.DomainName
                         Credential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeComputer.Credentials])
+                        DependsOn  = ('[xDNSServerAddress]DNS')
                     }
                 }
 
