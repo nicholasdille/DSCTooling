@@ -1,4 +1,138 @@
-﻿function Set-VmConfiguration {
+﻿function Assert-OutputPath{
+}
+
+function Clear-OutputPath {
+}
+
+function Publish-DscConfig {
+}
+
+function Invoke-DscConfig {
+    . $PSDSC_DataFile
+    Import-Module $PSDSC_ConfigFile
+
+    if (-Not (Test-Path -Path "$PSDSC_OutputPath")) {
+        New-Item -ItemType Directory -Path "$PSDSC_OutputPath"
+    }
+    Get-ChildItem "$PSDSC_OutputPath" | foreach {
+        Remove-Item -Path "$($_.FullName)" -Force
+    }
+
+    Write-Verbose 'LabConfiguration'
+    LabConfiguration -OutputPath $PSDSC_OutputPath -ConfigurationData $ConfigData
+
+    New-DscCheckSum -ConfigurationPath $PSDSC_OutputPath
+    Get-ChildItem -Path "$PSDSC_OutputPath" | where { $_.Name -imatch '^(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\.mof(\.checksum)?$' } | foreach {
+        Copy-Item -Path "$($_.FullName)" -Destination "\\hv-04\c`$\Program Files\WindowsPowershell\DscService\Configuration" -Force
+    }
+}
+
+function Push-DscConfig {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Path = (Get-Location)
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+    )
+
+    if ($CredentialName) {
+        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+
+    } else {
+        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose
+    }
+}
+
+function Get-DscMetaConfig {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+    )
+
+    if ($CredentialName) {
+        Get-DscLocalConfigurationManager -ComputerName $ComputerName -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+
+    } else {
+        Get-DscLocalConfigurationManager -ComputerName $ComputerName
+    }
+}
+
+function Get-DscConfig {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+    )
+
+    if ($CredentialName) {
+        Get-DscConfiguration -ComputerName $ComputerName -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+
+    } else {
+        Get-DscConfiguration -ComputerName $ComputerName
+    }
+}
+
+function Get-CredentialFromStore {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialStore = $PSScriptRoot
+    )
+
+    Import-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ('Cred\' + $CredentialName + '.clixml'))
+}
+
+function New-CredentialInStore {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [pscredential]
+        $Credential
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialStore = $PSScriptRoot
+    )
+
+    $Credential | Export-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ('Cred\' + $CredentialName + '.clixml'))
+}
+
+function Set-VmConfiguration {
     param(
         [Parameter(Mandatory=$true)]
         [string]
