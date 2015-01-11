@@ -364,6 +364,25 @@
         }
         #endregion
 
+        #region PullClientDebug
+        if ($Node.Roles.Keys -icontains 'PullClientDebug') {
+            $PullConfig = $ConfigurationData.MetaConfig.PullClientDebug
+
+            LocalConfigurationManager {
+                ConfigurationID                = $Node.NodeName
+                CertificateId                  = $Node.CertificateThumbprint
+                ConfigurationModeFrequencyMins = $PullConfig.ConfigurationModeFrequencyMins
+                ConfigurationMode              = $PullConfig.ConfigurationMode
+                RebootNodeIfNeeded             = $PullConfig.RebootNodeIfNeeded
+                RefreshMode                    = $PullConfig.RefreshMode
+                RefreshFrequencyMins           = $PullConfig.RefreshFrequencyMins
+                DownloadManagerName            = $PullConfig.DownloadManagerName
+                DownloadManagerCustomData      = $PullConfig.DownloadManagerCustomData
+                AllowModuleOverwrite           = $PullConfig.AllowModuleOverwrite
+            }
+        }
+        #endregion
+
         #region PushClient
         if ($Node.Roles.Keys -icontains 'PushClient') {
             $PushConfig = $ConfigurationData.MetaConfig.PushClient

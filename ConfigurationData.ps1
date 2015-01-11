@@ -18,8 +18,7 @@
             }
         }
         @{
-            #NodeName              = '9565b711-30c2-43d5-a929-2167955733d3'
-            NodeName              = 'contoso-dc-01'
+            NodeName              = '9565b711-30c2-43d5-a929-2167955733d3'
             CertificateThumbprint = 'a6e1b663d7cadcb62d49a59bde903e07f9b999be'
             CertificateFile       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert\contoso-dc-01.cer')
             Roles = @{
@@ -106,7 +105,6 @@
             RefreshFrequencyMins           = 2
             DownloadManagerName            = 'WebDownloadManager'
             DownloadManagerCustomData      = @{ServerUrl = 'https://hv-04.demo.dille.name:8080/PSDSCPullServer/PSDSCPullServer.svc'}
-            #DownloadManagerCustomData      = @{ServerUrl = 'http://hv-04.demo.dille.name:8081/PSDSCPullServer/PSDSCPullServer.svc'; AllowUnsecureConnection = 'True'}
         }
     }
 
