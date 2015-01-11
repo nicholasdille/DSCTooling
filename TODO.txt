@@ -11,3 +11,8 @@
 [ ] Neue Funktionen
     [ ] PsSession an Knoten
     [ ] CredSSP-Unterstützung
+    [ ] Inject file using Guest Service Interface
+    [ ] Apply meta configuration using remoting
+    [ ] Publish modules to pull server
+    [ ] create checksums for modules on pull server
+[ ] Fix errors caused by xRemoteDesktopAdmin
