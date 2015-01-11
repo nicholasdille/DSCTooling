@@ -9,8 +9,7 @@
 [ ] Test additional domain controller
 [ ] Validation of $ConfigData inside configuration
 [ ] Neue Funktionen
-    [ ] PsSession an Knoten
-    [ ] CredSSP-Unterstützung
+    [ ] CredSSP-Unterstützung für Remote-Session
     [ ] Inject file using Guest Service Interface
     [ ] Apply meta configuration using remoting
     [ ] Publish modules to pull server
