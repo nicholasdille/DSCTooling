@@ -12,11 +12,16 @@
     )
 
     if ($CredentialName) {
-        Get-DscLocalConfigurationManager -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
+        $CimSession = New-CimSession -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
-        Get-DscLocalConfigurationManager -ComputerName $ComputerName
+        $CimSession = New-CimSession -ComputerName $ComputerName
     }
+    if (-Not $CimSession) {
+        Write-Error ('Failed to create CIM session to <{0}>. Aborting.' -f $ComputerName)
+        throw
+    }
+    Get-DscLocalConfigurationManager -CimSession $CimSession
 }
 
 function Get-DscConfig {
@@ -33,9 +38,14 @@ function Get-DscConfig {
     )
 
     if ($CredentialName) {
-        Get-DscConfiguration -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
+        $CimSession = New-CimSession -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
-        Get-DscConfiguration -ComputerName $ComputerName
+        $CimSession = New-CimSession -ComputerName $ComputerName
     }
+    if (-Not $CimSession) {
+        Write-Error ('Failed to create CIM session to <{0}>. Aborting.' -f $ComputerName)
+        throw
+    }
+    Get-DscConfiguration -CimSession $CimSession
 }
