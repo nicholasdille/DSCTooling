@@ -1,7 +1,56 @@
-﻿function Assert-OutputPath{
+﻿function Assert-PathVariable {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $VariableName
+        ,
+        [Parameter(Mandatory=$false)]
+        [switch]
+        $CheckOnly
+    )
+
+    Assert-Variable -VariableName $VariableName
+    $VariableValue = Get-Variable -Name $VariableName -ValueOnly
+
+    if (-Not (Test-Path -Path $VariableValue)) {
+        if ($CheckOnly) {
+            Write-Error ('Path <{0}> specified in variable <{1}> does not exist. Aborting.' -f $VariableValue,$VariableName)
+            throw
+
+        } else {
+            New-Item -ItemType Directory -Path $VariableValue
+        }
+    }
+}
+
+function Assert-Variable {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $VariableName
+    )
+
+    if (-Not (Get-Variable -Name $VariableName -ValueOnly -ErrorAction SilentlyContinue)) {
+        Write-Error ('Variable <{0}> is not defined. Aborting.' -f $VariableName)
+        throw
+    }
+}
+
+function Assert-BasePath {
+    Assert-PathVariable -VariableName PSDSC_BasePath
+}
+
+function Assert-OutputPath {
+    Assert-PathVariable -VariableName PSDSC_OutputPath
 }
 
 function Clear-OutputPath {
+    Assert-OutputPath
+    Get-ChildItem "$PSDSC_OutputPath" | foreach {
+        Remove-Item -Path "$($_.FullName)" -Force
+    }
 }
 
 function Publish-DscConfig {
@@ -11,12 +60,8 @@ function Invoke-DscConfig {
     . $PSDSC_DataFile
     Import-Module $PSDSC_ConfigFile
 
-    if (-Not (Test-Path -Path "$PSDSC_OutputPath")) {
-        New-Item -ItemType Directory -Path "$PSDSC_OutputPath"
-    }
-    Get-ChildItem "$PSDSC_OutputPath" | foreach {
-        Remove-Item -Path "$($_.FullName)" -Force
-    }
+    Assert-OutputPath
+    Clear-OutputPath
 
     Write-Verbose 'LabConfiguration'
     LabConfiguration -OutputPath $PSDSC_OutputPath -ConfigurationData $ConfigData
@@ -44,9 +89,10 @@ function Push-DscConfig {
         [string]
         $CredentialName
     )
+    Assert-BasePath
 
     if ($CredentialName) {
-        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
         Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose
@@ -67,7 +113,7 @@ function Get-DscMetaConfig {
     )
 
     if ($CredentialName) {
-        Get-DscLocalConfigurationManager -ComputerName $ComputerName -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+        Get-DscLocalConfigurationManager -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
         Get-DscLocalConfigurationManager -ComputerName $ComputerName
@@ -88,7 +134,7 @@ function Get-DscConfig {
     )
 
     if ($CredentialName) {
-        Get-DscConfiguration -ComputerName $ComputerName -Credential (Import-Clixml -Path (Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $CredentialName + '.clixml')))
+        Get-DscConfiguration -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
         Get-DscConfiguration -ComputerName $ComputerName
@@ -105,10 +151,10 @@ function Get-CredentialFromStore {
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]
-        $CredentialStore = $PSScriptRoot
+        $CredentialStore = $PSDSC_CredPath
     )
 
-    Import-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ('Cred\' + $CredentialName + '.clixml'))
+    Import-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml'))
 }
 
 function New-CredentialInStore {
@@ -126,10 +172,10 @@ function New-CredentialInStore {
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]
-        $CredentialStore = $PSScriptRoot
+        $CredentialStore = $PSDSC_CredPath
     )
 
-    $Credential | Export-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ('Cred\' + $CredentialName + '.clixml'))
+    $Credential | Export-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml'))
 }
 
 function Set-VmConfiguration {
@@ -167,13 +213,13 @@ function Set-VmConfiguration {
         $IPv4Pattern = '^\d+\.\d+\.\d+\.\d+$'
     )
     
-    $DomainCredFile = Join-Path -Path $PSScriptRoot -ChildPath ('Cred\' + $DomainCredName + '.clixml')
-    $CertFile       = Join-Path -Path $PSScriptRoot -ChildPath ('Cert\' + $VmName + '.pfx')
-    $MetaFile       = Join-Path -Path $PSScriptRoot -ChildPath ('Output\' + $NodeGuid + '.meta.mof')
+    $DomainCredFile = Join-Path -Path $PSDSC_CredPath   -ChildPath ($DomainCredName + '.clixml')
+    $CertFile       = Join-Path -Path $PSDSC_CertPath   -ChildPath ($VmName + '.pfx')
+    $MetaFile       = Join-Path -Path $PSDSC_OutputPath -ChildPath ($NodeGuid + '.meta.mof')
 
-    $LocalCredFile  = Join-Path -Path $PSScriptRoot -ChildPath 'Cred\' + $LocalCredName + '.clixml'
-    $CertCredFile   = Join-Path -Path $PSScriptRoot -ChildPath 'Cred\Certificates.clixml'
-    $CaFile         = Join-Path -Path $PSScriptRoot -ChildPath 'Cert\' + $RootCaName + '.cer'
+    $LocalCredFile  = Join-Path -Path $PSDSC_CredPath   -ChildPath ($LocalCredName + '.clixml')
+    $CertCredFile   = Join-Path -Path $PSDSC_CredPath   -ChildPath 'Certificates.clixml'
+    $CaFile         = Join-Path -Path $PSDSC_CertPath   -ChildPath ($RootCaName + '.cer')
 
     Enable-VMIntegrationService -ComputerName $VmHost -VMName $VmName -Name 'Guest Service Interface'
 
