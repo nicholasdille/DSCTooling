@@ -3,7 +3,5 @@
 /Cert/*.pfx
 /Cred/*.clixml
 /Injection/*
-/InjectionFullyUnattended/*
 /Examples/*
 /DSC-Modules/*
-PSDSC-ResourceDownloader.clixml
