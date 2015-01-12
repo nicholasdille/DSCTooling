@@ -1,4 +1,5 @@
 ﻿function New-PsRemoteSession {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -9,35 +10,56 @@
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
+        ,
+        [Parameter(Mandatory=$false)]
+        [switch]
+        $UseCredSsp
     )
 
-    if ($CredentialName) {
-        $PsSession = New-PSSession -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
+    if ($UseCredSsp -And -Not $CredentialName) {
+        throw 'When using CredSSP credentials must be specified. Aborting.'
+    }
 
-    } else {
-        $PsSession = New-PSSession -ComputerName $ComputerName
-    }
+    $params = @{}
+                           $params.Add('ComputerName',    $ComputerName)
+    if ($CredentialName) { $params.Add('Credential',      (Get-CredentialFromStore -CredentialName $CredentialName)) }
+    if ($UseCredSsp)     { $params.Add('Authentication', 'Credssp') }
+
+    $PsSession = New-PSSession @params
     if (-Not $PsSession) {
-        Write-Error ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
-        throw
+        throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
     }
+
     $PsSession
 }
 
 function Enter-PsRemoteSession {
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
         [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [switch]
+        $UseCredSsp
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName="PsSession")]
+        [ValidateNotNullOrEmpty()]
+        [PSSession]
+        $PsSession
     )
 
-    Enter-PSSession -Session (New-PsRemoteSession @PSBoundParameters)
+    if (-Not $PsSession) {
+        $PsSession = New-PsRemoteSession @PSBoundParameters
+    }
+    Enter-PSSession -Session $PsSession
 }
 
 function ConvertTo-EncryptedString {

@@ -1,4 +1,5 @@
-﻿function Get-DscMetaConfig {
+﻿function Build-CimSession {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -11,41 +12,64 @@
         $CredentialName
     )
 
-    if ($CredentialName) {
-        $CimSession = New-CimSession -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
+    $params = @{}
+                           $params.Add('ComputerName',    $ComputerName)
+    if ($CredentialName) { $params.Add('Credential',      (Get-CredentialFromStore -CredentialName $CredentialName)) }
 
-    } else {
-        $CimSession = New-CimSession -ComputerName $ComputerName
-    }
+    $CimSession = New-CimSession @params
     if (-Not $CimSession) {
-        Write-Error ('Failed to create CIM session to <{0}>. Aborting.' -f $ComputerName)
-        throw
+        throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
+    }
+
+    $CimSession
+}
+
+function Get-DscMetaConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName="CimSession")]
+        [ValidateNotNullOrEmpty()]
+        [CimSession]
+        $CimSession
+    )
+
+    if (-Not $CimSession) {
+        $CimSession = Build-CimSession @PSBoundParameters
     }
     Get-DscLocalConfigurationManager -CimSession $CimSession
 }
 
 function Get-DscConfig {
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
         [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName="CimSession")]
+        [ValidateNotNullOrEmpty()]
+        [CimSession]
+        $CimSession
     )
 
-    if ($CredentialName) {
-        $CimSession = New-CimSession -ComputerName $ComputerName -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
-
-    } else {
-        $CimSession = New-CimSession -ComputerName $ComputerName
-    }
     if (-Not $CimSession) {
-        Write-Error ('Failed to create CIM session to <{0}>. Aborting.' -f $ComputerName)
-        throw
+        $CimSession = Build-CimSession @PSBoundParameters
     }
     Get-DscConfiguration -CimSession $CimSession
 }
