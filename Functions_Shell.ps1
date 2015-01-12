@@ -15,8 +15,7 @@
 
     if (-Not (Test-Path -Path $VariableValue)) {
         if ($CheckOnly) {
-            Write-Error ('Path <{0}> specified in variable <{1}> does not exist. Aborting.' -f $VariableValue,$VariableName)
-            throw
+            throw ('Path <{0}> specified in variable <{1}> does not exist. Aborting.' -f $VariableValue,$VariableName)
 
         } else {
             New-Item -ItemType Directory -Path $VariableValue
@@ -33,8 +32,7 @@ function Assert-Variable {
     )
 
     if (-Not (Get-Variable -Name $VariableName -ValueOnly -ErrorAction SilentlyContinue)) {
-        Write-Error ('Variable <{0}> is not defined. Aborting.' -f $VariableName)
-        throw
+        throw ('Variable <{0}> is not defined. Aborting.' -f $VariableName)
     }
 }
 
