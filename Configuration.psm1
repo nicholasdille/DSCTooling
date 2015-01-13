@@ -174,7 +174,7 @@
             #endregion
 
             #region Virtual Machine
-            foreach ($VmNode in $AllNodes.where{ $_.Roles.VirtualMachine }) {
+            foreach ($VmNode in $AllNodes.where{$_.Roles.VirtualMachine}) {
                 $RoleVirtualMachine = $ConfigurationData.Roles.VirtualMachine
                 $VmName = $VmNode.Roles.Computer.MachineName
                 $VmBasePath = (Join-Path -Path $RoleHypervisor.StorageBasePath -ChildPath $VmName)
