@@ -1,4 +1,5 @@
 ﻿function Assert-PathVariable {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -24,6 +25,7 @@
 }
 
 function Assert-Variable {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -37,5 +39,8 @@ function Assert-Variable {
 }
 
 function Assert-BasePath {
+    [CmdletBinding()]
+    param()
+
     Assert-PathVariable -VariableName PSDSC_BasePath
 }

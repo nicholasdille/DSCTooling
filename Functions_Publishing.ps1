@@ -1,4 +1,5 @@
 ﻿function Publish-DscConfig {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -12,6 +13,7 @@
 }
 
 function Push-DscConfig {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -39,6 +41,9 @@ function Push-DscConfig {
 }
 
 function New-Certificate {
+    [CmdletBinding()]
+    param()
+
     $NewCertHostName = 'hv-05'
     $NewCertCn       = ('{0}.demo.dille.name' -f $NewCertHostName)
 
@@ -81,6 +86,7 @@ function New-Certificate {
 }
 
 function Set-VmConfiguration {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [string]
@@ -148,7 +154,8 @@ function Set-VmConfiguration {
     }
 }
 
-function Strip-DscMetaConfigurations {
+function Convert-DscMetaConfigurations {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -156,11 +163,12 @@ function Strip-DscMetaConfigurations {
     )
     
     Get-ChildItem -Path $Path | where { $_.Name -imatch '\.meta\.mof$' } | foreach {
-        Strip-DscMetaConfiguration -MofFullName $_.FullName
+        Convert-DscMetaConfiguration -MofFullName $_.FullName
     }
 }
 
-function Strip-DscMetaConfiguration {
+function Convert-DscMetaConfiguration {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]

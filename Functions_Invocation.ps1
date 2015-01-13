@@ -1,8 +1,14 @@
 ﻿function Assert-OutputPath {
+    [CmdletBinding()]
+    param()
+
     Assert-PathVariable -VariableName PSDSC_OutputPath
 }
 
 function Clear-OutputPath {
+    [CmdletBinding()]
+    param()
+
     Assert-OutputPath
     Get-ChildItem "$PSDSC_OutputPath" | foreach {
         Remove-Item -Path "$($_.FullName)" -Force
@@ -10,11 +16,17 @@ function Clear-OutputPath {
 }
 
 function Assert-DscCheckSum {
+    [CmdletBinding()]
+    param()
+
     Assert-OutputPath
     New-DscCheckSum -ConfigurationPath $PSDSC_OutputPath
 }
 
 function Invoke-DscConfig {
+    [CmdletBinding()]
+    param()
+
     Assert-BasePath
 
     . $PSDSC_DataFile
@@ -29,7 +41,8 @@ function Invoke-DscConfig {
     Publish-DscConfig
 }
 
-function Download-DscResources {
+function Get-DscResourcesFromTechNet {
+    [CmdletBinding()]
     param(
         [string]$ResourceUrlCacheFile = (Join-Path -Path $PSDSC_TempPath -ChildPath 'PSDSC-ResourceDownloader.clixml')
         ,

@@ -1,4 +1,5 @@
 ﻿function Get-CredentialFromStore {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -15,6 +16,7 @@
 }
 
 function New-CredentialInStore {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]

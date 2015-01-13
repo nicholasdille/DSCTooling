@@ -63,6 +63,7 @@ function Enter-PsRemoteSession {
 }
 
 function ConvertTo-EncryptedString {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
@@ -79,6 +80,7 @@ function ConvertTo-EncryptedString {
 }
 
 function ConvertFrom-EncryptedString {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
@@ -96,6 +98,7 @@ function ConvertFrom-EncryptedString {
 }
 
 function Get-PlaintextFromSecureString {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
@@ -107,6 +110,7 @@ function Get-PlaintextFromSecureString {
 }
 
 Function New-Password() {
+    [CmdletBinding()]
     Param(
         [int]$Length=10
         ,
@@ -128,6 +132,7 @@ Function New-Password() {
 }
 
 function Get-VmIdFromHyperV {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -141,6 +146,7 @@ function Get-VmIdFromHyperV {
 }
 
 function Get-VmIdFromVmm {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]

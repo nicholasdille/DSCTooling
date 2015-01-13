@@ -1,4 +1,4 @@
-﻿function Build-CimSession {
+﻿function New-SimpleCimSession {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -27,24 +27,24 @@
 function Get-DscMetaConfig {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName
         ,
-        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
         ,
-        [Parameter(Mandatory=$true,ParameterSetName="CimSession")]
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
         [CimSession]
         $CimSession
     )
 
     if (-Not $CimSession) {
-        $CimSession = Build-CimSession @PSBoundParameters
+        $CimSession = New-SimpleCimSession @PSBoundParameters
     }
     Get-DscLocalConfigurationManager -CimSession $CimSession
 }
@@ -52,24 +52,24 @@ function Get-DscMetaConfig {
 function Get-DscConfig {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName
         ,
-        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
         ,
-        [Parameter(Mandatory=$true,ParameterSetName="CimSession")]
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
         [CimSession]
         $CimSession
     )
 
     if (-Not $CimSession) {
-        $CimSession = Build-CimSession @PSBoundParameters
+        $CimSession = New-SimpleCimSession @PSBoundParameters
     }
     Get-DscConfiguration -CimSession $CimSession
 }
