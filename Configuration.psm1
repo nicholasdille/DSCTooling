@@ -53,10 +53,10 @@
         #endregion
 
         #region Remote Desktop
-        <#xRemoteDesktopAdmin RDP {
+        xRemoteDesktopAdmin RDP {
             Ensure = 'Present'
             UserAuthentication = 'Secure'
-        }#>
+        }
         #endregion
 
         #region Wave Deployment
