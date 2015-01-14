@@ -36,23 +36,23 @@
 function Enter-PsRemoteSession {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName
         ,
-        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
         ,
-        [Parameter(Mandatory=$false,ParameterSetName="Computer")]
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
         [switch]
         $UseCredSsp
         ,
-        [Parameter(Mandatory=$true,ParameterSetName="PsSession")]
+        [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
         [ValidateNotNullOrEmpty()]
-        [PSSession]
+        #[PSSession]
         $PsSession
     )
 
@@ -156,4 +156,53 @@ function Get-VmIdFromVmm {
         [string]$Name
     )
     (Get-SCVirtualMachine @PSBoundParameters | Select Id).Id
+}
+
+function Copy-VMFileRemotely {
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
+        [ValidateNotNullOrEmpty()]
+        #[PSSession]
+        $PsSession
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $VmName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Files
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $DestinationPath
+    )
+
+    if (-Not $PsSession) {
+        $params = @{
+            ComputerName   = $ComputerName
+            CredentialName = $CredentialName
+            UseCredSsp     = $True
+        }
+        $PsSession = New-PsRemoteSession @params
+    }
+
+    Invoke-Command -Session $PsSession -ScriptBlock {
+        foreach ($File in $Using:Files) {
+            Copy-VMFile $Using:VmName -SourcePath $File -DestinationPath $Using:DestinationPath -CreateFullPath -FileSource Host -Force
+        }
+    }
 }

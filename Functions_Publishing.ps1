@@ -7,7 +7,7 @@
         $ComputerName
     )
 
-    Get-ChildItem -Path "$PSDSC_OutputPath" | where { $_.Name -imatch '^(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\.mof(\.checksum)?$' } | foreach {
+    Get-ChildItem -Path "$PSDSC_OutputPath" | Where-Object { $_.Name -imatch '^(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\.mof(\.checksum)?$' } | foreach {
         Copy-Item -Path "$($_.FullName)" -Destination ('\\{0}\c$\Program Files\WindowsPowershell\DscService\Configuration' -f $ComputerName) -Force
     }
 }
@@ -75,7 +75,7 @@ function New-Certificate {
     certreq.exe -accept $CertFile
 
     # retrieve certificate thumbprint
-    $NewCert = Get-ChildItem Cert:\LocalMachine\My | where { $_.Subject -icontains $NewCertCn }
+    $NewCert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -icontains $NewCertCn }
     $NewCertThumb = $NewCert.Thumbprint
 
     # Export certificate to pfx
@@ -136,14 +136,10 @@ function Set-VmConfiguration {
         $File -imatch '^(\w)\:\\' | Out-Null
         $File.Replace($Matches[0], '\\' + $env:COMPUTERNAME + '.' + $env:USERDNSDOMAIN + '\' + $Matches[1] + '$\')
     }
-    Invoke-Command -ComputerName $VmHost -Authentication Credssp -Credential (Import-Clixml -Path $DomainCredFile) -ScriptBlock {
-        foreach ($File in $Using:Files) {
-            Copy-VMFile $Using:VmName -SourcePath $File -DestinationPath $Using:LocalBasePath -CreateFullPath -FileSource Host -Force
-        }
-    }
+    Copy-VMFileRemotely -ComputerName $VmHost -Credential (Import-Clixml -Path $DomainCredFile) -VmName $VmName -Files $Files -DestinationPath $LocalBasePath
 
     $Vm = Get-VM -ComputerName $VmHost -Name $VmName
-    $VmIp = $Vm.NetworkAdapters[0].IPAddresses | where { $_ -match $IPv4Pattern } | select -First 1
+    $VmIp = $Vm.NetworkAdapters[0].IPAddresses | Where-Object { $_ -match $IPv4Pattern } | Select-Object -First 1
     $CertPass = (Import-Clixml -Path $CertCredFile)
     Invoke-Command -ComputerName $VmIp -Credential (Import-Clixml -Path $LocalCredFile) -ScriptBlock {
         Get-ChildItem $Using:LocalBasePath\*.cer | foreach { Import-Certificate -FilePath $_.FullName -CertStoreLocation Cert:\LocalMachine\Root | Out-Null }
@@ -162,7 +158,7 @@ function Convert-DscMetaConfigurations {
         [string]$Path
     )
     
-    Get-ChildItem -Path $Path | where { $_.Name -imatch '\.meta\.mof$' } | foreach {
+    Get-ChildItem -Path $Path | Where-Object { $_.Name -imatch '\.meta\.mof$' } | foreach {
         Convert-DscMetaConfiguration -MofFullName $_.FullName
     }
 }
