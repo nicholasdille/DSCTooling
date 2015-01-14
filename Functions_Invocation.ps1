@@ -30,7 +30,7 @@ function Invoke-DscConfig {
     Assert-BasePath
 
     . $PSDSC_DataFile
-    Import-Module $PSDSC_ConfigFile
+    Import-Module $PSDSC_ConfigFile -Force
 
     Assert-OutputPath
     Clear-OutputPath
