@@ -1,5 +1,27 @@
 ﻿$ConfigData = @{
     AllNodes = @(
+        <#@{
+            NodeName              = 'NODENAME'
+            CertificateThumbprint = 'THUMBPRINT'
+            CertificateFile       = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert\NODENAME.cer')
+            Roles = @{}
+            WindowsFeatures = @(
+                @{ Ensure = 'Present'; Name = 'Hyper-V-PowerShell' }
+            )
+            Services = @(
+                @{ Name = 'WMSVC'; StartupType = 'Automatic'; State = 'Running'; DependsOn = '[WindowsFeature]Web-Mgmt-Service' }
+            )
+            RegistrySettings = @(
+                @{
+                    Ensure = 'Present'
+                    Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WebManagement\Server'
+                    ValueName = 'EnableRemoteManagement'
+                    ValueType = 'Dword'
+                    ValueData = '1'
+                    DependsOn = ('[WindowsFeature]Web-Mgmt-Service', '[Service]WMSVC')
+                }
+            )
+        }#>
         @{
             NodeName              = 'hv-04'
             CertificateThumbprint = 'cc70984bb677bfd158ebffe47a2f22e3d5c10d8f'
@@ -10,9 +32,22 @@
                     DomainName  = 'demo.dille.name'
                     Credentials = 'administrator@demo.dille.name'
                 }
-                Hypervisor = @{}
+                Hypervisor = @{
+                    VhdxTemplatePath = '\\demo.dille.name\storage\VMM_Library\VHD'
+                    StorageBasePath  = '\\demo.dille.name\storage\VMM_Storage'
+                    VirtualSwitches = @(
+                        @{
+                            Name              = 'Datacenter'
+                            Type              = 'External'
+                            NetAdapterName    = 'Ethernet0'
+                            AllowManagementOS = $True
+                        }
+                    )                
+                }
                 PushClient = @{}
                 PullServer = @{
+                    PullPort = 8080
+                    CompliancePort = 9080
                     CertificateThumbprint = 'cc70984bb677bfd158ebffe47a2f22e3d5c10d8f'
                 }
             }
@@ -26,6 +61,7 @@
                     MachineName = 'contoso-dc-01'
                 }
                 VirtualMachine        = @{
+                    SwitchName       = 'Datacenter'
                     State            = 'Running'
                     VhdxTemplateName = 'HyperV_Gen2_WS12R2U1_20140915.vhdx'
                     StartupMemory    = 512MB
@@ -36,6 +72,8 @@
                 PullClientDebug      = @{}
                 FirstDomainController = @{
                     DomainName  = 'contoso.com'
+                    RetryCount       = 3
+                    RetryIntervalSec = 10
                     Credentials = 'administrator@contoso.com'
                 }
             }
@@ -51,6 +89,7 @@
                     Credentials = 'administrator@contoso.com'
                 }
                 VirtualMachine        = @{
+                    SwitchName       = 'Datacenter'
                     State            = 'Running'
                     VhdxTemplateName = 'HyperV_Gen2_WS12R2U1_20140915.vhdx'
                     StartupMemory    = 512MB
@@ -65,6 +104,13 @@
                     Credential_Agent = 'Service-Sql-MSSQLSERVER@contoso.com'
                     Credential_SA    = 'sa@contoso-sql-01'
                     Admins           = ('CONTOSO\Sql-Admins')
+                    SourcePath       = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
+                    Credential_Setup = 'administrator@demo.dille.name'
+                    Features         = 'SQLENGINE'
+                    Collation        = $null
+                }
+                SqlMgmtTools = @{
+                    Credential_Setup = 'administrator@demo.dille.name'
                 }
             }
         }
@@ -108,83 +154,7 @@
         }
     }
 
-    Roles = @{
-        VirtualMachine = @{
-            SwitchName = 'Datacenter'
-        }
-        PullServer = @{
-            PullPort = 8080
-            CompliancePort = 9080
-            WindowsFeatures = @(
-                @{ Ensure = 'Present'; Name = 'DSC-Service' }
-                @{ Ensure = 'Present'; Name = 'Web-Mgmt-Service' }
-            )
-            Services = @(
-                @{ Name = 'WMSVC'; StartupType = 'Automatic'; State = 'Running'; DependsOn = '[WindowsFeature]Web-Mgmt-Service' }
-            )
-            RegistrySettings = @(
-                @{
-                    Ensure    = 'Present'
-                    Key       = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WebManagement\Server'
-                    ValueName = 'EnableRemoteManagement'
-                    ValueType = 'Dword'
-                    ValueData = '1'
-                    DependsOn = ('[WindowsFeature]Web-Mgmt-Service', '[Service]WMSVC')
-                }
-            )
-        }
-        Hypervisor = @{
-            VhdxTemplatePath = '\\demo.dille.name\storage\VMM_Library\VHD'
-            StorageBasePath  = '\\demo.dille.name\storage\VMM_Storage'
-            WindowsFeatures  = @(
-                @{ Ensure = 'Present'; Name = 'Hyper-V' }
-                @{ Ensure = 'Present'; Name = 'Hyper-V-PowerShell' }
-            )
-            RegistrySettings = @()
-            VirtualSwitches = @(
-                @{
-                    Ensure            = 'Present'
-                    Name              = 'Datacenter'
-                    Type              = 'External'
-                    NetAdapterName    = 'Ethernet0'
-                    AllowManagementOS = $True
-                    DependsOn         = '[WindowsFeature]Hyper-V'
-                }
-            )
-        }
-        FirstDomainController = @{
-            RetryCount       = 3
-            RetryIntervalSec = 10
-            WindowsFeatures = @(
-                @{ Ensure = 'Present'; Name = 'AD-Domain-Services' }
-                @{ Ensure = 'Present'; Name = 'RSAT-AD-PowerShell' }
-                @{ Ensure = 'Present'; Name = 'RSAT-ADDS-Tools' }
-            )
-        }
-        AdditionalDomainController = @{
-            RetryCount       = 3
-            RetryIntervalSec = 10
-            WindowsFeatures = @(
-                @{ Ensure = 'Present'; Name = 'AD-Domain-Services' }
-                @{ Ensure = 'Present'; Name = 'RSAT-AD-PowerShell' }
-                @{ Ensure = 'Present'; Name = 'RSAT-ADDS-Tools' }
-            )
-        }
-        SqlStandalone = @{
-            SourcePath       = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
-            Credential_Setup = 'administrator@demo.dille.name'
-            Features         = 'SQLENGINE'
-            Collation        = $null
-            #Admins           = ('', '')
-            WindowsFeatures = @(
-                @{ Ensure = 'Present'; Name = 'NET-Framework-Core' }
-            )
-        }
-        SqlMgmtTools = @{
-            SourcePath = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
-            WindowsFeatures = @(
-                @{ Ensure = 'Present'; Name = 'NET-Framework-Core'; Source = '\\demo.dille.name\storage\install\Microsoft\Windows Server 2012 R2\WS12R2U1NovEN\sources\SxS' }
-            )
-        }
+    Environment = @{
+        WindowsSource = '\\demo.dille.name\storage\install\Microsoft\Windows Server 2012 R2\WS12R2U1NovEN'
     }
 }

@@ -76,59 +76,71 @@
         #endregion
         
         #region WindowsFeature
-        foreach ($RoleName in $Node.Roles.Keys) {
-            if ($ConfigurationData.Roles[$RoleName].WindowsFeatures) {
-                foreach ($WindowsFeature in $ConfigurationData.Roles[$RoleName].WindowsFeatures) {
-                    WindowsFeature $WindowsFeature.Name {
-                        Ensure    = $WindowsFeature.Ensure
-                        Name      = $WindowsFeature.Name
-                        DependsOn = $WindowsFeature.DependsOn
-                    }
-                }
+        foreach ($WindowsFeature in $Node.WindowsFeatures) {
+            WindowsFeature $WindowsFeature.Name {
+                Ensure    = $WindowsFeature.Ensure
+                Name      = $WindowsFeature.Name
+                DependsOn = $WindowsFeature.DependsOn
             }
         }
         #endregion
 
         #region Service
-        foreach ($RoleName in $Node.Roles.Keys) {
-            if ($ConfigurationData.Roles[$RoleName].Services) {
-                foreach ($Service in $ConfigurationData.Roles[$RoleName].Services) {
-                    Service $Service.Name {
-                        Name        = $Service.Name
-                        StartupType = $Service.StartupType
-                        State       = $Service.State
-                        DependsOn   = $Service.DependsOn
-                    }
-                }
+        foreach ($Service in $Node.Services) {
+            Service $Service.Name {
+                Name        = $Service.Name
+                StartupType = $Service.StartupType
+                State       = $Service.State
+                DependsOn   = $Service.DependsOn
             }
         }
         #endregion
                 
         #region Registry
-        foreach ($RoleName in $Node.Roles.Keys) {
-            if ($ConfigurationData.Roles[$RoleName].RegistrySettings) {
-                foreach ($RegistrySetting in $ConfigurationData.Roles[$RoleName].RegistrySettings) {
-                    Registry $RegistrySetting.ValueName {
-                        Ensure    = $RegistrySetting.Ensure
-                        Key       = $RegistrySetting.Key
-                        ValueName = $RegistrySetting.ValueName
-                        ValueType = $RegistrySetting.ValueType
-                        ValueData = $RegistrySetting.ValueData
-                        DependsOn = $RegistrySetting.DependsOn
-                    }
-                }
+        foreach ($RegistrySetting in $Node.RegistrySettings) {
+            Registry $RegistrySetting.ValueName {
+                Ensure    = $RegistrySetting.Ensure
+                Key       = $RegistrySetting.Key
+                ValueName = $RegistrySetting.ValueName
+                ValueType = $RegistrySetting.ValueType
+                ValueData = $RegistrySetting.ValueData
+                DependsOn = $RegistrySetting.DependsOn
             }
         }
         #endregion
 
         #region Role PullServer
         if ($Node.Roles.Keys -icontains 'PullServer') {
-            $PullConfig = $ConfigurationData.Roles.PullServer
-            $NodePullConfig = $Node.Roles.PullServer
+            $PullConfig = $Node.Roles.PullServer
+
+            WindowsFeature DSC-Service {
+                Ensure = 'Present'
+                Name   = 'DSC-Service'
+            }
+            WindowsFeature Web-Mgmt-Service {
+                Ensure = 'Present'
+                Name   = 'Web-Mgmt-Service'
+            }
+
+            Service WMSVC {
+                Name        = 'WMSVC'
+                StartupType = 'Automatic'
+                State       = 'Running'
+                DependsOn   = '[WindowsFeature]Web-Mgmt-Service'
+            }
+
+            Registry EnableRemoteManagement {
+                Ensure    = 'Present'
+                Key       = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WebManagement\Server'
+                ValueName = 'EnableRemoteManagement'
+                ValueType = 'Dword'
+                ValueData = '1'
+                DependsOn = ('[WindowsFeature]Web-Mgmt-Service', '[Service]WMSVC')
+            }
 
             $CertificateThumbPrint = 'AllowUnencryptedTraffic'
-            if ($NodePullConfig.containsKey('CertificateThumbPrint')) {
-                $CertificateThumbPrint = $NodePullConfig.CertificateThumbprint
+            if ($PullConfig.containsKey('CertificateThumbPrint')) {
+                $CertificateThumbPrint = $PullConfig.CertificateThumbprint
             }
 
             xDscWebService PSDSCPullServer {
@@ -158,30 +170,42 @@
 
         #region Role Hypervisor
         if ($Node.Roles.Keys -icontains 'Hypervisor') {
-            $RoleHypervisor = $ConfigurationData.Roles.Hypervisor
+            $RoleHypervisor = $Node.Roles.Hypervisor
+
+            #region WindowsFeature
+            WindowsFeature Hyper-V {
+                Ensure    = 'Present'
+                Name      = 'Hyper-V'
+            }
+            WindowsFeature Hyper-V-PowerShell {
+                Ensure    = 'Present'
+                Name      = 'Hyper-V-PowerShell'
+            }
+            #endregion
                     
             #region Virtual Switch
             foreach ($VirtualSwitch in $RoleHypervisor.VirtualSwitches) {
                 xVMSwitch $VirtualSwitch.Name {
-                    Ensure            = $VirtualSwitch.Ensure
+                    Ensure            = 'Present'
                     Name              = $VirtualSwitch.Name
                     Type              = $VirtualSwitch.Type
                     NetAdapterName    = $VirtualSwitch.NetAdapterName
                     AllowManagementOS = $VirtualSWitch.AllowManagementOS
-                    DependsOn         = $VirtualSWitch.DependsOn
+                    DependsOn         = ('[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
                 }
             }
             #endregion
 
             #region Virtual Machine
             foreach ($VmNode in $AllNodes.where{$_.Roles.VirtualMachine}) {
-                $RoleVirtualMachine = $ConfigurationData.Roles.VirtualMachine
+                $RoleVirtualMachine = $Node.Roles.VirtualMachine
                 $VmName = $VmNode.Roles.Computer.MachineName
+                $VmSwitchName = $VmNode.Roles.VirtualMachine.SwitchName
                 $VmBasePath = (Join-Path -Path $RoleHypervisor.StorageBasePath -ChildPath $VmName)
                 $VhdxTemplateName = $VmNode.Roles.VirtualMachine.VhdxTemplateName
 
                 #region VHDX Copy
-                File "VhdxCopy_$VmName" {
+                File ('VhdxCopy_' + $VmName) {
                     Ensure          = 'Present'
                     Type            = 'File'
                     SourcePath      = (Join-Path -Path $RoleHypervisor.VhdxTemplatePath -ChildPath $VhdxTemplateName)
@@ -212,21 +236,21 @@
                     $State = $VmNode.Roles.VirtualMachine.State
                 }
  
-                xVMHyperV "NewVm_$VmName" {
+                xVMHyperV ('NewVm_' + $VmName) {
                     Ensure          = 'Present'
                     Generation      = 'vhdx'
                     StartupMemory   = $StartupMemory
                     MinimumMemory   = $MinimumMemory
                     MaximumMemory   = $MaximumMemory
                     MACAddress      = $VmNode.Roles.VirtualMachine.MACAddress
-                    Path            = (Join-Path -PAth $RoleHypervisor.StorageBasePath -ChildPath $VmName)
+                    Path            = (Join-Path -Path $RoleHypervisor.StorageBasePath -ChildPath $VmName)
                     ProcessorCount  = $ProcessorCount
                     RestartIfNeeded = $True
                     State           = $State
-                    SwitchName      = $RoleVirtualMachine.SwitchName
+                    SwitchName      = $VmSwitchName
                     Name            = $VmName
                     VHDPath         = (Join-Path -Path $VmBasePath -ChildPath $VhdxTemplateName)
-                    DependsOn       = ("[File]VhdxCopy_$VmName", "[xVMSwitch]$($RoleVirtualMachine.SwitchName)")
+                    DependsOn       = (('[File]VhdxCopy_' + $VmName), ('[xVMSwitch]' + $VmSwitchName))
                 }
                 #endregion
             }
@@ -234,77 +258,102 @@
         }
         #endregion
 
+        #region Roles DomainController
+        if ($Node.Roles.Keys -icontains 'FirstDomainController' -Or $Node.Roles.Keys -icontains 'AdditionalDomainController') {
+            WindowsFeature AD-Domain-Services {
+                Ensure    = 'Present'
+                Name      = 'AD-Domain-Services'
+            }
+            
+            WindowsFeature RSAT-AD-PowerShell {
+                Ensure    = 'Present'
+                Name      = 'RSAT-AD-PowerShell'
+            }
+            
+            WindowsFeature RSAT-ADDS-Tools {
+                Ensure    = 'Present'
+                Name      = 'RSAT-ADDS-Tools'
+            }
+        }
+
         #region Role FirstDomainController
         if ($Node.Roles.Keys -icontains 'FirstDomainController') {
-            $RoleFirstDc = $ConfigurationData.Roles.FirstDomainController
-            $NodeFirstDc = $Node.Roles.FirstDomainController
+            $RoleFirstDc = $Node.Roles.FirstDomainController
             
-            xADDomain "FirstDc_$($NodeFirstDc.DomainName)" {
-                DomainName                    = $NodeFirstDc.DomainName
-                DomainAdministratorCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeFirstDc.Credentials])
-                SafemodeAdministratorPassword = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeFirstDc.Credentials])
-                #DnsDelegationCredential       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeFirstDc.Credentials])
+            xADDomain 'FirstDc_$($RoleFirstDc.DomainName)' {
+                DomainName                    = $RoleFirstDc.DomainName
+                DomainAdministratorCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleFirstDc.Credentials])
+                SafemodeAdministratorPassword = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleFirstDc.Credentials])
+                #DnsDelegationCredential       = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleFirstDc.Credentials])
                 DependsOn                     = ('[WindowsFeature]AD-Domain-Services', '[WindowsFeature]RSAT-AD-PowerShell', '[WindowsFeature]RSAT-ADDS-Tools')
             }
 
-            xWaitForADDomain "ForestWait_$($RoleFirstDc.DomainName)" {
-                DomainName           = $NodeFirstDc.DomainName
-                DomainUserCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeFirstDc.Credentials])
+            xWaitForADDomain 'ForestWait_$($RoleFirstDc.DomainName)' {
+                DomainName           = $RoleFirstDc.DomainName
+                DomainUserCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleFirstDc.Credentials])
                 RetryCount           = $RoleFirstDc.RetryCount
                 RetryIntervalSec     = $RoleFirstDc.RetryIntervalSec
-                DependsOn            = "[xADDomain]FirstDc_$($NodeFirstDc.DomainName)"
+                DependsOn            = '[xADDomain]FirstDc_$($RoleFirstDc.DomainName)'
             }
         }
         #endregion
 
         #region Role AdditionalDomainController
         if ($Node.Roles.Keys -icontains 'AdditionalDomainController') {
-            $RoleNextDc = $ConfigurationData.Roles.AdditionalDomainController
-            $NodeNextDc = $Node.Roles.AdditionalDomainController
+            $RoleNextDc = $Node.Roles.AdditionalDomainController
             
-            xWaitForADDomain "ForestWait_$($RoleNextDc.DomainName)" {
+            xWaitForADDomain 'ForestWait_$($RoleNextDc.DomainName)' {
                 DomainName           = $RoleNextDc.DomainName
-                DomainUserCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeNextDc.Credential])
+                DomainUserCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleNextDc.Credential])
                 RetryCount           = $RoleNextDc.RetryCount
                 RetryIntervalSec     = $RoleNextDc.RetryIntervalSec
             }
 
-            xADDomainController "NextDc$($RoleNextDc.DomainName)" {
+            xADDomainController 'NextDc$($RoleNextDc.DomainName)' {
                 DomainName                    = $RoleNextDc.DomainName
-                DomainAdministratorCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeNextDc.Credential])
-                SafemodeAdministratorPassword = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeNextDc.Credential])
-                DependsOn                     = "[xWaitForADDomain]ForestWait_$($RoleNextDc.DomainName)"
+                DomainAdministratorCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleNextDc.Credential])
+                SafemodeAdministratorPassword = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleNextDc.Credential])
+                DependsOn                     = ('[xWaitForADDomain]ForestWait_$($RoleNextDc.DomainName)', '[WindowsFeature]AD-Domain-Services', '[WindowsFeature]RSAT-AD-PowerShell', '[WindowsFeature]RSAT-ADDS-Tools')
             }
         }
         #endregion
+        #endregion
+
+        #region Roles SQL
+        if ($Node.Roles.Keys -icontains 'SqlStandalone' -Or $Node.Roles.Keys -icontains 'SqlMgmtTools') {
+            WindowsFeature NET-Framework-Core {
+                Ensure = 'Present'
+                Name   = 'NET-Framework-Core'
+                Source = $ConfigurationData.Environment.WindowsSource + '\source\SxS'
+            }
+        }
 
         #region Role SQL Server
         if ($Node.Roles.Keys -icontains 'SqlStandalone') {
-            $RoleSql = $ConfigurationData.Roles.SqlStandalone
-            $NodeSql = $Node.Roles.SqlStandalone
+            $RoleSql = $Node.Roles.SqlStandalone
             $NodeComputer = $Node.Roles.Computer
 
-            <#xADUser ('Service-Sql-' + $NodeSql.InstanceName) {
+            <#xADUser ('Service-Sql-' + $RoleSql.InstanceName) {
                 DomainName                    = $NodeComputer.DomainName
                 DomainAdministratorCredential = $NodeComputer.Credentials
-                UserName                      = 'Service-Sql-' + $NodeSql.InstanceName
-                Password                      = $NodeSql.ServicePassword
+                UserName                      = 'Service-Sql-' + $RoleSql.InstanceName
+                Password                      = $RoleSql.ServicePassword
                 Ensure                        = 'Present'
             }#>
             
-            xSqlServerSetup ('SqlSetup_' + $NodeSql.InstanceName) {
-                InstanceName        = $NodeSql.InstanceName
+            xSqlServerSetup ('SqlSetup_' + $RoleSql.InstanceName) {
+                InstanceName        = $RoleSql.InstanceName
                 PID                 = $RoleSql.ProductKey
                 SetupCredential     = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Setup])
                 SourcePath          = $RoleSql.SourcePath
-                AgtSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
+                AgtSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Agent])
                 ErrorReporting      = 'False'
                 Features            = $RoleSql.Features
                 SecurityMode        = 'SQL'
-                SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_SA])
+                SAPwd               = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_SA])
                 SQLCollation        = $RoleSql.Collation
-                SQLSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Agent])
-                SQLSysAdminAccounts = $RoleSql.Admins + $NodeSql.Admins
+                SQLSvcAccount       = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Agent])
+                SQLSysAdminAccounts = $RoleSql.Admins + $RoleSql.Admins
                 #SourceFolder         = ''
                 #SQMReporting        = 'False'
                 #UpdateEnabled       = 'True'
@@ -318,30 +367,33 @@
                 #SQLUserDBDir         = ''
                 #SQLUserDBLogDir      = ''
                 #SQLBackupDir         = ''
-                DependsOn            = ('[WindowsFeature]NET-Framework-Core'<#, '[xADUser]Service-Sql-' + $NodeSql.InstanceName#>)
+                DependsOn            = ('[WindowsFeature]NET-Framework-Core'<#, '[xADUser]Service-Sql-' + $RoleSql.InstanceName#>)
             }
 
-            xSqlServerFirewall ('SqlFirewall' + $NodeSql.InstanceName) {
+            xSqlServerFirewall ('SqlFirewall' + $RoleSql.InstanceName) {
                 SourcePath   = $RoleSql.SourcePath
-                InstanceName = $NodeSql.InstanceName
+                InstanceName = $RoleSql.InstanceName
                 Features     = $RoleSql.Features
-                DependsOn    = ('[xSqlServerSetup]SqlSetup_' + $NodeSql.InstanceName)
+                DependsOn    = ('[xSqlServerSetup]SqlSetup_' + $RoleSql.InstanceName)
             }
         }
         #endregion
 
+        #region Role SqlMgmtTools
         if ($Node.Roles.Keys -icontains 'SqlMgmtTools') {
             $RoleSql = $ConfigurationData.Roles.SqlMgmtTools
-            $NodeSql = $Node.Roles.SqlMgmtTools
+            $RoleSql = $Node.Roles.SqlMgmtTools
             
             xSqlServerSetup SQLMT {
                 SourcePath      = $RoleSql.SourcePath
-                SetupCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeSql.Credential_Setup])
+                SetupCredential = (Import-Clixml -Path $ConfigurationData.Credentials[$RoleSql.Credential_Setup])
                 InstanceName    = 'NULL'
                 Features        = 'SSMS,ADV_SSMS'
                 DependsOn       = '[WindowsFeature]NET-Framework-Core'
             }
         }
+        #endregion
+        #endregion
 
         #region LocalConfigurationManager
 
