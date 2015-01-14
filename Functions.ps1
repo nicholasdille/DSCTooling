@@ -151,57 +151,14 @@ function Get-VmIdFromVmm {
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$VMMServer
-        ,
-        [Parameter(Mandatory=$true)]
+        ,[Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$Name
     )
     (Get-SCVirtualMachine @PSBoundParameters | Select Id).Id
 }
 
-function Get-VmIp {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $ComputerName
-        ,
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $VmName
-        ,
-        [Parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $IPv4Pattern = '^\d+\.\d+\.\d+\.\d+$'
-    )
-
-    (Get-VM -ComputerName $ComputerName -Name $VmName).NetworkAdapters[0].IPAddresses | Where-Object { $_ -match $IPv4Pattern } | Select-Object -First 1
-}
-
-function Convert-RemoteFilePath {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $FilePath
-        ,
-        [string]
-        $ComputerName = $env:COMPUTERNAME
-        ,
-        [string]
-        $DomainName = $env:USERDNSDOMAIN
-    )
-
-    $FilePath -imatch '^(\w)\:\\' | Out-Null
-    $FilePath.Replace($Matches[0], '\\' + $ComputerName + '.' + $DomainName + '\' + $Matches[1] + '$\')
-}
-
 function Copy-VMFileRemotely {
-    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
         [ValidateNotNullOrEmpty()]
