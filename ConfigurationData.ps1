@@ -87,6 +87,8 @@
                     MachineName = 'contoso-sql-01'
                     DomainName  = 'contoso.com'
                     Credentials = 'administrator@contoso.com'
+                    DnsServer   = '10.0.0.112'
+                    Adapter     = 'Ethernet 3'
                 }
                 VirtualMachine        = @{
                     SwitchName       = 'Datacenter'

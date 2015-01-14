@@ -22,10 +22,12 @@
             }
             
             if ($NodeComputer.containsKey('DomainName') -And $NodeComputer.containsKey('Credentials')) {
-                xDNSServerAddress DNS {
-                    Address        = ('10.0.0.112')
-                    InterfaceAlias = 'Ethernet 3'
-                    AddressFamily  = 'IPv4'
+                if ($NodeComputer.containsKey('DnsServer') -And $NodeComputer.containsKey('Adapter')) {
+                    xDNSServerAddress DNS {
+                        Address        = ($NodeComputer.DnsServer)
+                        InterfaceAlias = $NodeComputer.Adapter
+                        AddressFamily  = 'IPv4'
+                    }
                 }
 
                 if ($NodeComputer.containsKey('MachineName')) {
