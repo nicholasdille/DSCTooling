@@ -112,6 +112,7 @@
                     Collation        = $null
                 }
                 SqlMgmtTools = @{
+                    SourcePath       = '\\demo.dille.name\storage\install\Microsoft\SQL Server 2012\SQL2012'
                     Credential_Setup = 'administrator@demo.dille.name'
                 }
             }

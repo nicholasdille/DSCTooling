@@ -22,32 +22,34 @@
             }
             
             if ($NodeComputer.containsKey('DomainName') -And $NodeComputer.containsKey('Credentials')) {
+                $DependsOn = $Null
                 if ($NodeComputer.containsKey('DnsServer') -And $NodeComputer.containsKey('Adapter')) {
                     xDNSServerAddress DNS {
                         Address        = ($NodeComputer.DnsServer)
                         InterfaceAlias = $NodeComputer.Adapter
                         AddressFamily  = 'IPv4'
                     }
+                    $DependsOn = ('[xDNSServerAddress]DNS')
                 }
 
                 if ($NodeComputer.containsKey('MachineName')) {
-                    xComputer RenameComputerAndJoinDomain {
+                    xComputer ComputerNameAndDomainJoin {
                         Name       = $NodeComputer.MachineName
                         DomainName = $NodeComputer.DomainName
                         Credential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeComputer.Credentials])
-                        DependsOn  = ('[xDNSServerAddress]DNS')
+                        DependsOn  = $DependsOn
                     }
 
                 } else {
-                    xComputer JoinDomain {
+                    xComputer ComputerNameAndDomainJoin {
                         DomainName = $NodeComputer.DomainName
                         Credential = (Import-Clixml -Path $ConfigurationData.Credentials[$NodeComputer.Credentials])
-                        DependsOn  = ('[xDNSServerAddress]DNS')
+                        DependsOn  = $DependsOn
                     }
                 }
 
             } else {
-                xComputer RenameComputer {
+                xComputer ComputerNameAndDomainJoin {
                     Name       = $NodeComputer.MachineName
                 }
             }
@@ -324,9 +326,10 @@
         #region Roles SQL
         if ($Node.Roles.Keys -icontains 'SqlStandalone' -Or $Node.Roles.Keys -icontains 'SqlMgmtTools') {
             WindowsFeature NET-Framework-Core {
-                Ensure = 'Present'
-                Name   = 'NET-Framework-Core'
-                Source = $ConfigurationData.Environment.WindowsSource + '\source\SxS'
+                Ensure     = 'Present'
+                Name       = 'NET-Framework-Core'
+                Source     = $ConfigurationData.Environment.WindowsSource + '\source\SxS'
+                DependsOn  = '[xComputer]ComputerNameAndDomainJoin'
             }
         }
 
