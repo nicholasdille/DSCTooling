@@ -9,6 +9,8 @@
     Import-DscResource -ModuleName xRemoteDesktopAdmin
     Import-DscResource -ModuleName xSqlServer
     Import-DscResource -ModuleName xNetworking
+    Import-DscResource -ModuleName xPowerShellExecutionPolicy
+    Import-DscResource -ModuleName xSystemSecurity
     #endregion
  
     Node $AllNodes.NodeName {
@@ -56,10 +58,43 @@
         }
         #endregion
 
-        #region Remote Desktop
-        xRemoteDesktopAdmin RDP {
+        #region Base config
+        foreach ($SslVersion in ('SSL 3.0', 'SSL 2.0')) {
+            Registry ('Disable' + $SslVersion.Replace('.', '').Replace(' ','')) {
+                Key = "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\$SslVersion\Server"
+                ValueName = 'Enabled'
+                ValueType = 'Dword'
+                ValueData = '0'
+                Ensure = 'Present'
+            }
+        }
+
+        xIEEsc DisableIEEscUsers {
+            IsEnabled = $false
+            UserRole = 'Users'
+        }
+        
+        xIEEsc DisableIEEscAdmins {
+            IsEnabled = $false
+            UserRole = 'Administrators'
+        }
+
+        xRemoteDesktopAdmin RemoteDesktopSettings {
             Ensure = 'Present'
             UserAuthentication = 'Secure'
+        }
+
+        xFirewall AllowRDP {
+            Name = 'DSC - Remote Desktop Admin Connections'
+            DisplayGroup = 'Remote Desktop'
+            Ensure = 'Present'
+            State = 'Enabled'
+            Access = 'Allow'
+            Profile = ('Any')
+        }
+
+        xPowerShellExecutionPolicy ExecutionPolicy {
+            ExecutionPolicy = 'RemoteSigned'
         }
         #endregion
 
