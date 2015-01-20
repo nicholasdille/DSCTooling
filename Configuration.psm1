@@ -360,11 +360,28 @@
 
         #region Roles SQL
         if ($Node.Roles.Keys -icontains 'SqlStandalone' -Or $Node.Roles.Keys -icontains 'SqlMgmtTools') {
+            File SxS_Copy {
+                Ensure          = 'Present'
+                SourcePath      = $ConfigurationData.Environment.WindowsSource + '\sources\SxS'
+                Type            = 'Directory'
+                Recurse         = $True
+                DestinationPath = 'C:\Windows\Temp\SxS'
+                Credential      = (Import-Clixml -Path $ConfigurationData.Credentials[$ConfigurationData.Environment.WindowsSourceCredentials])
+            }
+
+            <#Package SxS_Fix {
+                Name = 'KB3005628'
+                Path = $ConfigurationData.Environment.WindowsSource + '\..\Windows8.1-KB2966828-x64.msu'
+                ProductId = ''
+                Credential = (Import-Clixml -Path $ConfigurationData.Credentials[$ConfigurationData.Environment.WindowsSourceCredentials])
+                Ensure = 'Present'
+            }#>
+
             WindowsFeature NET-Framework-Core {
                 Ensure     = 'Present'
                 Name       = 'NET-Framework-Core'
-                Source     = $ConfigurationData.Environment.WindowsSource + '\sources\SxS'
-                DependsOn  = '[xComputer]ComputerNameAndDomainJoin'
+                Source     = 'C:\Windows\Temp\SxS'
+                DependsOn  = ('[xComputer]ComputerNameAndDomainJoin', '[File]SxS_Copy'<#, '[Package]SxS_Fix'#>)
             }
         }
 
