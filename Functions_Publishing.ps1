@@ -162,7 +162,7 @@ function Invoke-CommandOnFile {
         ,
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string[]
+        [string[]]
         $Files
         ,
         [Parameter(Mandatory=$true)]
