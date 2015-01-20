@@ -44,3 +44,11 @@ function Assert-BasePath {
 
     Assert-PathVariable -VariableName PSDSC_BasePath
 }
+
+function Update-Imports {
+    Assert-BasePath
+    Set-Location -Path $PSDSC_BasePath
+    . .\Variables.ps1
+    . $PSDSC_FunctionsFile
+    Get-ChildItem $PSDSC_BasePath\Functions_*.ps1 | foreach { . .\$($_.Name) }
+}
