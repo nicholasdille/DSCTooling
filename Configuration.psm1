@@ -363,7 +363,7 @@
             WindowsFeature NET-Framework-Core {
                 Ensure     = 'Present'
                 Name       = 'NET-Framework-Core'
-                Source     = $ConfigurationData.Environment.WindowsSource + '\source\SxS'
+                Source     = $ConfigurationData.Environment.WindowsSource + '\sources\SxS'
                 DependsOn  = '[xComputer]ComputerNameAndDomainJoin'
             }
         }
