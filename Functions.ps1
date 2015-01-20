@@ -25,12 +25,12 @@
     if ($CredentialName) { $params.Add('Credential',      (Get-CredentialFromStore -CredentialName $CredentialName)) }
     if ($UseCredSsp)     { $params.Add('Authentication', 'Credssp') }
 
-    $PsSession = New-PSSession @params
-    if (-Not $PsSession) {
+    $Session = New-PSSession @params
+    if (-Not $Session) {
         throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
     }
 
-    $PsSession
+    $Session
 }
 
 function Enter-PsRemoteSession {
@@ -52,14 +52,14 @@ function Enter-PsRemoteSession {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
         [ValidateNotNullOrEmpty()]
-        #[PSSession]
-        $PsSession
+        [System.Management.Automation.Runspaces.PSSession]
+        $Session
     )
 
-    if (-Not $PsSession) {
-        $PsSession = New-PsRemoteSession @PSBoundParameters
+    if (-Not $Session) {
+        $Session = New-PsRemoteSession @PSBoundParameters
     }
-    Enter-PSSession -Session $PsSession
+    Enter-PSSession -Session $Session
 }
 
 function ConvertTo-EncryptedString {
@@ -215,8 +215,8 @@ function Copy-VMFileRemotely {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
         [ValidateNotNullOrEmpty()]
-        #[PSSession]
-        $PsSession
+        [System.Management.Automation.Runspaces.PSSession]
+        $Session
         ,
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -234,16 +234,16 @@ function Copy-VMFileRemotely {
         $DestinationPath
     )
 
-    if (-Not $PsSession) {
+    if (-Not $Session) {
         $params = @{
             ComputerName   = $ComputerName
             CredentialName = $CredentialName
             UseCredSsp     = $True
         }
-        $PsSession = New-PsRemoteSession @params
+        $Session = New-PsRemoteSession @params
     }
 
-    Invoke-Command -Session $PsSession -ScriptBlock {
+    Invoke-Command -Session $Session -ScriptBlock {
         foreach ($File in $Using:Files) {
             Copy-VMFile $Using:VmName -SourcePath $File -DestinationPath $Using:DestinationPath -CreateFullPath -FileSource Host -Force
         }

@@ -39,7 +39,7 @@ function Get-DscMetaConfig {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
-        #[CimSession]
+        [Microsoft.Management.Infrastructure.CimSession]
         $CimSession
     )
 
@@ -64,7 +64,7 @@ function Get-DscConfig {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
-        #[CimSession]
+        [Microsoft.Management.Infrastructure.CimSession]
         $CimSession
     )
 
@@ -89,7 +89,7 @@ function Invoke-ConfigCheck {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
-        #[CimSession]
+        [Microsoft.Management.Infrastructure.CimSession]
         $CimSession
         ,
         [Parameter(Mandatory=$false)]
@@ -134,7 +134,7 @@ function Invoke-ConsistencyTask {
         ,
         [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
         [ValidateNotNullOrEmpty()]
-        #[CimSession]
+        [Microsoft.Management.Infrastructure.CimSession]
         $CimSession
     )
 
