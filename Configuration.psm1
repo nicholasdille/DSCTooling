@@ -222,15 +222,88 @@
             }
             #endregion
                     
+            #region Teaming
+            foreach ($Team in $RoleHypervisor.Teams) {
+                cNetworkTeam "Team$($Team.Name)" {
+                    Name                   = $Team.Name
+                    TeamingMode            = $Team.SwitchIndependent
+                    LoadBalancingAlgorithm = $Team.HyperVPort
+                    TeamMembers            = $Team.Adapters
+                    Ensure                 = 'Present'
+                }
+            }
+            #endregion
+ 
             #region Virtual Switch
-            foreach ($VirtualSwitch in $RoleHypervisor.VirtualSwitches) {
-                xVMSwitch $VirtualSwitch.Name {
-                    Ensure            = 'Present'
-                    Name              = $VirtualSwitch.Name
-                    Type              = $VirtualSwitch.Type
-                    NetAdapterName    = $VirtualSwitch.NetAdapterName
-                    AllowManagementOS = $VirtualSWitch.AllowManagementOS
-                    DependsOn         = ('[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
+            foreach ($Switch in $RoleHypervisor.VirtualSwitches) {
+                if ($Switch.Type -ieq 'External') {
+                    cVMSwitch "Switch$($Switch.Name)" {
+                        Name                   = $Switch.Name
+                        Type                   = $Switch.Type
+                        AllowManagementOS      = $false
+                        MinimumBandwidthMode   = 'Weight'
+                        NetAdapterName         = $Switch.Adapter
+                        Ensure                 = 'Present'
+                        DependsOn              = ("[cNetworkTeam]$($Switch.Adapter)", '[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
+                    }
+
+                } elseif ($Switch.Type -ieq 'Private') {
+                    cVMSwitch "Switch$($Switch.Name)" {
+                        Name                   = $Switch.Name
+                        Type                   = $Switch.Type
+                        Ensure                 = 'Present'
+                        DependsOn              = ('[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
+                    }
+
+                } elseif ($Switch.Type -ieq 'Internal') {
+                    throw ('Hyper-V Virtual Switch of type {0} has not been implemented yet' -f $Switch.Type)
+                }
+            }
+            #endregion
+ 
+            xDNSServerAddress DNS {
+                InterfaceAlias         = $Node.VirtualAdapters.Management.InterfaceAlias
+                AddressFamily          = 'IPV4'
+                Address                = $Node.VirtualAdapters.Management.DnsServers
+                DependsOn              = ('[xIPAddress]AdapterAddressManagement')
+            }
+
+            #region Adapter
+            foreach ($AdapterName in $RoleHypervisor.VirtualAdapters.Keys) {
+                $Adapter = $Node.VirtualAdapters.$AdapterName
+
+                cVMNetworkAdapter "Adapter$AdapterName" {
+                    Name                   = $AdapterName
+                    SwitchName             = $Node.SwitchName
+                    ManagementOS           = $true
+                    Ensure                 = 'Present'
+                    DependsOn              = '[cVMSwitch]HostSwitch'
+                }
+
+                cVMNetworkAdapterSettings "AdapterSettings$AdapterName" {
+                    Name                   = $AdapterName
+                    SwitchName             = $Node.SwitchName
+                    ManagementOS           = $true
+                    MinimumBandwidthWeight = $Adapter.Weight
+                    DependsOn              = '[cVMSwitch]HostSwitch', ('[cVMNetworkAdapter]Adapter' + $AdapterName)
+                }
+ 
+                if ($Adapter.VlanId -gt 0) {
+                    cVMNetworkAdapterVlan "AdapterVlan$AdapterName" {
+                        Name                   = $AdapterName
+                        ManagementOS           = $true
+                        AdapterMode            = 'Access'
+                        VlanId                 = $Adapter.VlanId
+                        DependsOn              = '[cVMSwitch]HostSwitch', ('[cVMNetworkAdapter]Adapter' + $AdapterName)
+                    }
+                }
+ 
+                xIPAddress "AdapterAddress$AdapterName" {
+                    InterfaceAlias         = $Adapter.InterfaceAlias
+                    AddressFamily          = 'IPV4'
+                    IPAddress              = $Adapter.IPAddress
+                    SubnetMask             = $Adapter.SubnetMask
+                    DependsOn              = ('[cVMNetworkAdapter]Adapter' + $AdapterName)
                 }
             }
             #endregion
