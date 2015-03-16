@@ -3,3 +3,5 @@
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Remoting.ps1')
 . (Join-Path -Path $PSScriptRoot -ChildPath 'SecureString.ps1')
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Virtualization.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'CSV.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'ActiveDirectory.ps1')
