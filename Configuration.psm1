@@ -5,6 +5,8 @@
     Import-DSCResource -ModuleName xPSDesiredStateConfiguration
     Import-DscResource -ModuleName xComputerManagement
     Import-DscResource -ModuleName xHyper-V
+    Import-DscResource -ModuleName cHyper-V
+    Import-DscResource -ModuleName cWindowsOS
     Import-DscResource -ModuleName xActiveDirectory
     Import-DscResource -ModuleName xRemoteDesktopAdmin
     Import-DscResource -ModuleName xSqlServer
@@ -226,8 +228,8 @@
             foreach ($Team in $RoleHypervisor.Teams) {
                 cNetworkTeam "Team$($Team.Name)" {
                     Name                   = $Team.Name
-                    TeamingMode            = $Team.SwitchIndependent
-                    LoadBalancingAlgorithm = $Team.HyperVPort
+                    TeamingMode            = $Team.TeamingMode
+                    LoadBalancingAlgorithm = $Team.LoadBalancingAlgorithm
                     TeamMembers            = $Team.Adapters
                     Ensure                 = 'Present'
                 }
@@ -244,7 +246,7 @@
                         MinimumBandwidthMode   = 'Weight'
                         NetAdapterName         = $Switch.Adapter
                         Ensure                 = 'Present'
-                        DependsOn              = ("[cNetworkTeam]$($Switch.Adapter)", '[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
+                        DependsOn              = ("[cNetworkTeam]Team$($Switch.Adapter)", '[WindowsFeature]Hyper-V', '[WindowsFeature]Hyper-V-PowerShell')
                     }
 
                 } elseif ($Switch.Type -ieq 'Private') {
@@ -261,23 +263,26 @@
             }
             #endregion
  
+            #region DNS
+            $ManagementAdapter = $Node.Roles.Hypervisor.VirtualAdapters.Management
             xDNSServerAddress DNS {
-                InterfaceAlias         = $Node.VirtualAdapters.Management.InterfaceAlias
+                InterfaceAlias         = $ManagementAdapter.InterfaceAlias
                 AddressFamily          = 'IPV4'
-                Address                = $Node.VirtualAdapters.Management.DnsServers
-                DependsOn              = ('[xIPAddress]AdapterAddressManagement')
+                Address                = $ManagementAdapter.DnsServers
+                DependsOn              = '[xIPAddress]AdapterAddressManagement'
             }
+            #endregion
 
             #region Adapter
             foreach ($AdapterName in $RoleHypervisor.VirtualAdapters.Keys) {
-                $Adapter = $Node.VirtualAdapters.$AdapterName
+                $Adapter = $RoleHypervisor.VirtualAdapters.$AdapterName
 
                 cVMNetworkAdapter "Adapter$AdapterName" {
                     Name                   = $AdapterName
-                    SwitchName             = $Node.SwitchName
+                    SwitchName             = $Adapter.SwitchName
                     ManagementOS           = $true
                     Ensure                 = 'Present'
-                    DependsOn              = '[cVMSwitch]HostSwitch'
+                    DependsOn              = "[cVMSwitch]Switch$($Adapter.SwitchName)"
                 }
 
                 cVMNetworkAdapterSettings "AdapterSettings$AdapterName" {
@@ -285,7 +290,7 @@
                     SwitchName             = $Node.SwitchName
                     ManagementOS           = $true
                     MinimumBandwidthWeight = $Adapter.Weight
-                    DependsOn              = '[cVMSwitch]HostSwitch', ('[cVMNetworkAdapter]Adapter' + $AdapterName)
+                    DependsOn              = ("[cVMSwitch]Switch$($Adapter.SwitchName)", "[cVMNetworkAdapter]Adapter$AdapterName")
                 }
  
                 if ($Adapter.VlanId -gt 0) {
@@ -294,7 +299,7 @@
                         ManagementOS           = $true
                         AdapterMode            = 'Access'
                         VlanId                 = $Adapter.VlanId
-                        DependsOn              = '[cVMSwitch]HostSwitch', ('[cVMNetworkAdapter]Adapter' + $AdapterName)
+                        DependsOn              = ("[cVMSwitch]Switch$($Adapter.SwitchName)", "[cVMNetworkAdapter]Adapter$AdapterName")
                     }
                 }
  
@@ -303,7 +308,7 @@
                     AddressFamily          = 'IPV4'
                     IPAddress              = $Adapter.IPAddress
                     SubnetMask             = $Adapter.SubnetMask
-                    DependsOn              = ('[cVMNetworkAdapter]Adapter' + $AdapterName)
+                    DependsOn              = "[cVMNetworkAdapter]Adapter$AdapterName"
                 }
             }
             #endregion

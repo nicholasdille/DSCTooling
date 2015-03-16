@@ -11,7 +11,7 @@
             StorageBasePath  = '\\demo.dille.name\storage\VMM_Storage'
             Teams = @(
                 @{
-                    Name                   = 'Team.Datacenter'
+                    Name                   = 'TeamDatacenter'
                     Adapters               = ('Ethernet0', 'Ethernet1 2')
                     TeamingMode            = 'SwitchIndependent'
                     LoadBalancingAlgorithm = 'HyperVPort'
@@ -19,18 +19,19 @@
             )
             VirtualSwitches = @(
                 @{
-                    Name              = 'Switch.Datacenter'
+                    Name              = 'Datacenter'
                     Type              = 'External'
-                    Adapter           = 'Team.Datacenter'
+                    Adapter           = 'TeamDatacenter'
                 }
                 @{
-                    Name              = 'Switch.Schulung1'
+                    Name              = 'SomeName'
                     Type              = 'Private'
                 }
             )
             VirtualAdapters        = @{
                 Management         = @{
                     InterfaceAlias = 'vEthernet (Management)'
+                    SwitchName     = 'Datacenter'
                     VlanId         = 0
                     Weight         = 20
                     IPAddress      = '10.0.0.154'
@@ -40,6 +41,7 @@
                 }
                 LiveMigration      = @{
                     InterfaceAlias = 'vEthernet (LiveMigration)'
+                    SwitchName     = 'Datacenter'
                     VlanId         = 10
                     Weight         = 30
                     IPAddress      = '10.0.1.154'
