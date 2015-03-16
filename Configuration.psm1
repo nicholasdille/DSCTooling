@@ -1,4 +1,4 @@
-﻿Configuration LabConfiguration {
+﻿Configuration MasterConfiguration {
     param()
 
     #region Import resources
@@ -447,62 +447,6 @@
                 InstanceName    = 'NULL'
                 Features        = 'SSMS,ADV_SSMS'
                 DependsOn       = '[WindowsFeature]NET-Framework-Core'
-            }
-        }
-        #endregion
-        #endregion
-
-        #region LocalConfigurationManager
-
-        #region PullClient
-        if ($Node.Roles.Keys -icontains 'PullClient') {
-            $PullConfig = $ConfigurationData.MetaConfig.PullClient
-
-            LocalConfigurationManager {
-                ConfigurationID                = $Node.NodeName
-                CertificateId                  = $Node.CertificateThumbprint
-                ConfigurationModeFrequencyMins = $PullConfig.ConfigurationModeFrequencyMins
-                ConfigurationMode              = $PullConfig.ConfigurationMode
-                RebootNodeIfNeeded             = $PullConfig.RebootNodeIfNeeded
-                RefreshMode                    = $PullConfig.RefreshMode
-                RefreshFrequencyMins           = $PullConfig.RefreshFrequencyMins
-                DownloadManagerName            = $PullConfig.DownloadManagerName
-                DownloadManagerCustomData      = $PullConfig.DownloadManagerCustomData
-                AllowModuleOverwrite           = $PullConfig.AllowModuleOverwrite
-            }
-        }
-        #endregion
-
-        #region PullClientDebug
-        if ($Node.Roles.Keys -icontains 'PullClientDebug') {
-            $PullConfig = $ConfigurationData.MetaConfig.PullClientDebug
-
-            LocalConfigurationManager {
-                ConfigurationID                = $Node.NodeName
-                CertificateId                  = $Node.CertificateThumbprint
-                ConfigurationModeFrequencyMins = $PullConfig.ConfigurationModeFrequencyMins
-                ConfigurationMode              = $PullConfig.ConfigurationMode
-                RebootNodeIfNeeded             = $PullConfig.RebootNodeIfNeeded
-                RefreshMode                    = $PullConfig.RefreshMode
-                RefreshFrequencyMins           = $PullConfig.RefreshFrequencyMins
-                DownloadManagerName            = $PullConfig.DownloadManagerName
-                DownloadManagerCustomData      = $PullConfig.DownloadManagerCustomData
-                AllowModuleOverwrite           = $PullConfig.AllowModuleOverwrite
-            }
-        }
-        #endregion
-
-        #region PushClient
-        if ($Node.Roles.Keys -icontains 'PushClient') {
-            $PushConfig = $ConfigurationData.MetaConfig.PushClient
-
-            LocalConfigurationManager {
-                ConfigurationID                = $Node.NodeName
-                CertificateId                  = $Node.CertificateThumbprint
-                ConfigurationMode              = $PushConfig.ConfigurationMode
-                RebootNodeIfNeeded             = $PushConfig.RebootNodeIfNeeded
-                RefreshFrequencyMins           = $PushConfig.RefreshFrequencyMins
-                ConfigurationModeFrequencyMins = $PushConfig.ConfigurationModeFrequencyMins
             }
         }
         #endregion
