@@ -45,10 +45,53 @@ function Assert-BasePath {
     Assert-PathVariable -VariableName PSDSC_BasePath
 }
 
-function Update-Imports {
-    Assert-BasePath
-    Set-Location -Path $PSDSC_BasePath
-    . .\Variables.ps1
-    . $PSDSC_FunctionsFile
-    Get-ChildItem $PSDSC_BasePath\Functions_*.ps1 | foreach { . .\$($_.Name) }
+function Assert-Path {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Path
+    )
+
+    if (-Not (Test-Path -Path $Path)) {
+        New-Item -ItemType Directory -Path $Path
+    }
+}
+
+function Assert-OutputPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $OutputPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Output')
+    )
+
+    Assert-Path -Path $OutputPath
+}
+
+function Clear-OutputPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $OutputPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Output')
+    )
+
+    Remove-Item -Path $OutputPath -Force
+}
+
+function Assert-DscCheckSum {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $OutputPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Output')
+    )
+
+    Assert-OutputPath
+    New-DscCheckSum -ConfigurationPath $OutputPath
 }

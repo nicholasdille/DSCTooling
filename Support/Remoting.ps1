@@ -131,6 +131,32 @@ function Enter-PsRemoteSession {
     Enter-PSSession -Session $Session
 }
 
+function New-SimpleCimSession {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+    )
+
+    $params = @{}
+                           $params.Add('ComputerName',    $ComputerName)
+    if ($CredentialName) { $params.Add('Credential',      (Get-CredentialFromStore -CredentialName $CredentialName)) }
+
+    $CimSession = New-CimSession @params
+    if (-Not $CimSession) {
+        throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
+    }
+
+    $CimSession
+}
+
 function Copy-ToRemoteItem {
     param(
         $SourcePath

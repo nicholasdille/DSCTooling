@@ -72,3 +72,528 @@ function New-DscResourceArchive {
 
     Compress-Archive -DestinationPath $ArchivePath -Path $ModulePath.FullName -CompressionLevel Optimal
 }
+
+function Get-DscMetaConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession]
+        $CimSession
+    )
+
+    if (-Not $CimSession) {
+        $CimSession = New-SimpleCimSession @PSBoundParameters
+    }
+    Get-DscLocalConfigurationManager -CimSession $CimSession
+}
+
+function Get-DscConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession]
+        $CimSession
+    )
+
+    if (-Not $CimSession) {
+        $CimSession = New-SimpleCimSession @PSBoundParameters
+    }
+    Get-DscConfiguration -CimSession $CimSession
+}
+
+function Invoke-ConfigCheck {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession]
+        $CimSession
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('UnknownFlag1','UnknownFlag2','UnknownFlag3')]
+        $Type
+    )
+
+    $Flags = @{
+        UnknownFlag1 = 1
+        UnknownFlag2 = 2
+        UnknownFlag3 = 3
+    }
+
+    $params = @{
+        Namespace  = 'root/Microsoft/Windows/DesiredStateConfiguration'
+        ClassName  = 'MSFT_DSCLocalConfigurationManager'
+        MethodName = 'PerformRequiredConfigurationChecks'
+        Arguments  = @{Flags = [System.UInt32]$Flags.$Type}
+    }
+
+    if (-Not $CimSession) {
+        $PSBoundParameters.Remove('Type')
+        $CimSession = New-SimpleCimSession @PSBoundParameters
+    }
+    $params.Add('CimSession', $CimSession)
+
+    Invoke-CimMethod @params
+}
+
+function Invoke-ConsistencyTask {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='CimSession')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession]
+        $CimSession
+    )
+
+    if (-Not $CimSession) {
+        $CimSession = New-SimpleCimSession @PSBoundParameters
+    }
+    Get-ScheduledTask -CimSession $CimSession -TaskName Consistency | Start-ScheduledTask
+}
+
+function Convert-DscMetaConfigurations {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Path
+    )
+    
+    Get-ChildItem -Path $Path | Where-Object { $_.Name -imatch '\.meta\.mof$' } | foreach {
+        Convert-DscMetaConfiguration -MofFullName $_.FullName
+    }
+}
+
+function Convert-DscMetaConfiguration {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$MofFullName
+    )
+    
+    $IncludeLine = $True
+    $MofContent = Get-Content -Path $_.FullName | foreach {
+        $Line = $_
+
+        #Write-Verbose ('Line: {0}' -f $Line)
+
+        if ($Line -match '^instance of ') {
+            #Write-Verbose ('  IncludeLine = {0}' -f $IncludeLine)
+            $IncludeLine = $False
+        }
+        if ($Line -match '^instance of (MSFT_DSCMetaConfiguration|MSFT_KeyValuePair)') {
+            #Write-Verbose ('  IncludeLine = {0}' -f $IncludeLine)
+            $IncludeLine = $True
+        }
+
+        if ($IncludeLine) {
+            #Write-Verbose '  SHOW'
+            $Line
+        }
+    }
+    $MofContent | Set-Content -Path $_.FullName
+}
+
+function New-DscNodeConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $NodeName = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+    )
+
+    @{
+        NodeName              = $NodeName
+        Roles = @{
+            #
+        }
+        WindowsFeatures = @(
+            @{ Ensure = 'Present'; Name = 'Hyper-V-PowerShell' }
+        )
+        Services = @(
+            @{ Name = 'WMSVC'; StartupType = 'Automatic'; State = 'Running'; DependsOn = '[WindowsFeature]Web-Mgmt-Service' }
+        )
+        RegistrySettings = @(
+            @{
+                Ensure = 'Present'
+                Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WebManagement\Server'
+                ValueName = 'EnableRemoteManagement'
+                ValueType = 'Dword'
+                ValueData = '1'
+                DependsOn = ('[WindowsFeature]Web-Mgmt-Service', '[Service]WMSVC')
+            }
+        )
+    }
+}
+
+function Build-DscNodeArray {
+    [CmdletBinding()]
+    [OutputType([System.Array])]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $NodePath = (Join-Path -Path $PSScriptRoot -ChildPath 'Node')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CertPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Filter
+    )
+
+    Write-Verbose ('[{0}] Collecting nodes from directory <{1}>' -f $MyInvocation.MyCommand, $NodePath)
+
+    $AllNodes = @()
+    Get-ChildItem -Recurse $NodePath | Where-Object Name -like '*.ps1' | ForEach-Object {
+        Write-Verbose ('[{0}] Processing file <{1}>' -f $MyInvocation.MyCommand, $_.Name)
+
+        if (-Not $Filter -Or $Filter -icontains $_.BaseName) {
+            $Node = $(. $_.FullName)
+            Write-Verbose ('[{0}] Processing node {1} with computername {2}' -f $MyInvocation.MyCommand, $Node.NodeName, $Node.Roles.Computer.MachineName)
+
+            $CertFile = Join-Path -Path $CertPath -ChildPath "$($Node.NodeName).cer"
+            Write-Verbose ('[{0}] Using certificate file <{1}>' -f $MyInvocation.MyCommand, $CertFile)
+
+            if (Test-Path -Path $CertFile) {
+                Write-Verbose ('[{0}] Adding certificate file to node configuration' -f $MyInvocation.MyCommand)
+                $Node.Add('CertificateFile', $CertFile)
+
+                $Certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+                $Certificate.Import($Node.CertificateFile)
+                Write-Verbose ('[{0}] Adding certificate thumbprint <{1}> to node configuration' -f $MyInvocation.MyCommand, $Certificate.Thumbprint)
+                $Node.Add('CertificateThumbprint', $Certificate.Thumbprint)
+
+                Write-Verbose ('[{0}] Adding node configuration to result array' -f $MyInvocation.MyCommand)
+                $AllNodes = $AllNodes + $Node
+
+            } else {
+                Write-Error ('[{0}] Unable to find certificate file {1}. Skipping node {2}' -f $MyInvocation.MyCommand, $CertFile, $Node.Roles.Computer.MachineName)
+            }
+        }
+    }
+
+    Write-Verbose ('[{0}] Done. Returning node configurations' -f $MyInvocation.MyCommand)
+    $AllNodes
+}
+
+function Build-DscCredentialsArray {
+    [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred')
+    )
+
+    $Credentials = @{}
+    Get-ChildItem -Recurse $CredPath | Where-Object Name -like '*.clixml' | ForEach-Object {
+        Write-Verbose ('[{0}] Processing credential <{1}>' -f $MyInvocation.MyCommand, $_.BaseName)
+
+        Write-Verbose ('[{0}] Adding credential <{1}> to with file <{2}>' -f $MyInvocation.MyCommand, $_.BaseName, $_.FullName)
+        $Credentials.Add($_.BaseName, $_.FullName)
+    }
+
+    Write-Verbose ('[{0}] Done and returning credentials' -f $MyInvocation.MyCommand)
+    $Credentials
+}
+
+function Build-DscConfig {
+    [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CertPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $NodePath = (Join-Path -Path $PSScriptRoot -ChildPath 'Node')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Filter
+    )
+
+    $ConfigData = @{
+        AllNodes = @()
+        Credentials = @{}
+        Environment = @{}
+    }
+
+    Write-Verbose ('[{0}] Adding environment configuration to configuration data' -f $MyInvocation.MyCommand)
+    $ConfigData['Environment'] = $(. (Join-Path -Path $PSScriptRoot -ChildPath 'EnvironmentConfiguration.ps1'))
+
+    Write-Verbose ('[{0}] Adding credentials to configuration data' -f $MyInvocation.MyCommand)
+    $ConfigData['Credentials'] = Build-DscCredentialsArray -CredPath $CredPath
+
+    Write-Verbose ('[{0}] Adding nodes to configuration data' -f $MyInvocation.MyCommand)
+    $params = @{
+        NodePath = $NodePath
+        CertPath = $CertPath
+    }
+    if ($Filter) {$params.Add('Filter', $Filter)}
+    $ConfigData['AllNodes'] = @(Build-DscNodeArray @params)
+
+    Write-Verbose ('[{0}] Done and returning configuration data' -f $MyInvocation.MyCommand)
+    $ConfigData
+}
+
+function Invoke-DscConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CertPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cert')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $NodePath = (Join-Path -Path $PSScriptRoot -ChildPath 'Node')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $OutputPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Output')
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Filter
+    )
+
+    Write-Verbose ('[{0}] Using the folloing input parameters: CertPath={1} CredPath={2} NodePath={3} OutputPath={4} Filter={5}' -f $MyInvocation.MyCommand, $CertPath, $CredPath, $NodePath, $OutputPath, ($Filter -join ';'))
+
+    Write-Verbose ('[{0}] Building configuration data' -f $MyInvocation.MyCommand)
+    $params = @{
+        CertPath = $CertPath
+        CredPath = $CredPath
+        NodePath = $NodePath
+    }
+    if ($Filter) {$params.Add('Filter', $Filter)}
+    $ConfigData = Build-DscConfig @params
+
+    Write-Verbose ('[{0}] Importing node configuration' -f $MyInvocation.MyCommand)
+    Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Configuration.psm1') -Force
+
+    Write-Verbose ('[{0}] Invoking node configuration' -f $MyInvocation.MyCommand)
+    MasterConfiguration -OutputPath $OutputPath -ConfigurationData $ConfigData
+}
+
+function Push-DscConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Path = (Get-Location)
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+    )
+    Assert-BasePath
+
+    if ($CredentialName) {
+        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
+
+    } else {
+        Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose
+    }
+}
+
+function Publish-DscConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+    )
+
+    Get-ChildItem -Path "$PSDSC_OutputPath" | Where-Object { $_.Name -imatch '^(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\.mof(\.checksum)?$' } | foreach {
+        Copy-Item -Path "$($_.FullName)" -Destination ('\\{0}\c$\Program Files\WindowsPowershell\DscService\Configuration' -f $ComputerName) -Force
+    }
+}
+
+function Invoke-CommandOnFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
+        [ValidateNotNullOrEmpty()]
+        #[PsSession]
+        $PsSession
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $VmName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $LocalCredentialName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Files
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        #[string]
+        $ScriptBlock
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $LocalBasePath = 'c:\dsc'
+    )
+
+    if (-Not $PsSession) {
+        $params = $PSBoundParameters
+        $params.Remove('MetaConfig')
+        $PsSession = New-PsRemoteSession @params
+    }
+    
+    Copy-VMFileRemotely -PsSession $PsSession -VmName $VmName -Files $Files -DestinationPath $LocalBasePath
+    $VmIp = Get-VmIp -ComputerName $VmHost -VmName $VmName
+    Invoke-Command -Session (New-PsRemoteSession -ComputerName $VmIp -CredentialName $LocalCredentialName) -ScriptBlock $ScriptBlock
+}
+
+function Set-DscMetaConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ComputerName
+        ,
+        [Parameter(Mandatory=$false,ParameterSetName='Computer')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $CredentialName
+        ,
+        [Parameter(Mandatory=$true,ParameterSetName='PsSession')]
+        [ValidateNotNullOrEmpty()]
+        #[PsSession]
+        $PsSession
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $VmName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $LocalCredentialName
+        ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $MetaConfig
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $LocalBasePath = 'c:\dsc'
+    )
+
+    if (-Not $PsSession) {
+        $params = $PSBoundParameters
+        $params.Remove('MetaConfig')
+        $PsSession = New-PsRemoteSession @params
+    }
+    
+    <#Copy-VMFileRemotely -PsSession $PsSession -VmName $VmName -Files ($MetaConfig) -DestinationPath $LocalBasePath
+    $VmIp = Get-VmIp -ComputerName $VmHost -VmName $VmName
+    Invoke-Command -Session (New-PsRemoteSession -ComputerName $VmIp -CredentialName $LocalCredentialName) -ScriptBlock {
+        Get-ChildItem $Using:LocalBasePath\*.meta.mof | Where-Object { $_.BaseName -notmatch 'localhost.meta.mof' } | Select-Object -First 1 | Rename-Item -NewName localhost.meta.mof -ErrorAction SilentlyContinue
+        Set-DscLocalConfigurationManager -Path $Using:LocalBasePath -ComputerName localhost
+    }#>
+
+    Invoke-CommandOnFile -PsSession $PsSession -VmName $VmName -LocalCredentialName $LocalCredentialName -Files ($MetaConfig) -LocalBasePath $LocalCredentialName -ScriptBlock {
+        Get-ChildItem $Using:LocalBasePath\*.meta.mof | Where-Object { $_.BaseName -notmatch 'localhost.meta.mof' } | Select-Object -First 1 | Rename-Item -NewName localhost.meta.mof -ErrorAction SilentlyContinue
+        Set-DscLocalConfigurationManager -Path $Using:LocalBasePath -ComputerName localhost
+    }
+}
