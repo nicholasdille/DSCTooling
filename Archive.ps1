@@ -265,3 +265,41 @@ function Assert-PsDscBasePath {
     
     Assert-PathVariable -VariableName Script:PsDscBasePath
 }
+
+Function Test-Pipeline {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+        [string[]]
+        $ComputerName
+    )
+
+    PROCESS {
+        Foreach ($Computer in $ComputerName) {
+            Write-Verbose ('[{0}] Processing computer <{1}>' -f $MyInvocation.MyCommand, $Computer)
+        }
+    }
+}
+
+Function Test-MultilinePipeline {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $input
+    )
+
+    BEGIN {
+        $data = $PSBoundParameters.input
+    }
+
+    PROCESS {
+        $data += $input + "`n"
+    }
+
+    END {
+        $data = $data.Substring(0, $data.Length - 1)
+        Write-Verbose ('[{0}] Done with result <{1}>' -f $MyInvocation.MyCommand, $data)
+    }
+}
