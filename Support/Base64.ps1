@@ -1,33 +1,46 @@
 ﻿function ConvertTo-Base64 {
+    [CmdletBinding()]
+    [OutputType([string])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
         [ValidateNotNullOrEmpty()]
-        [string]
-        $SourcePath
-        ,
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $DestinationPath
+        [string[]]
+        $Data
     )
 
-    $SourceData = Get-Content -Path $SourcePath -Encoding Byte
-    [System.Convert]::ToBase64String($SourceData) | Out-File -FilePath $DestinationPath
+    BEGIN {
+        $MultiLineData = @()
+    }
+
+    PROCESS {
+        $MultiLineData += @($Data)
+    }
+
+    END {
+        $RawData = $MultiLineData -join "`r`n"
+        Write-Output ('RawData=<{0}>' -f $RawData)
+
+        $ByteData = [system.Text.Encoding]::UTF8.GetBytes($RawData)
+
+        $Base64Data = [System.Convert]::ToBase64String($ByteData)
+
+        $Base64Data
+    }
 }
 
 function ConvertFrom-Base64 {
+    [CmdletBinding()]
+    [OutputType([string])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
         [ValidateNotNullOrEmpty()]
         [string]
-        $SourcePath
-        ,
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]
-        $DestinationPath
+        $Data
     )
 
-    $SourceData = Get-Content -Path $SourcePath
-    [System.Convert]::FromBase64String($SourceData) | Set-Content -Path $DestinationPath -Encoding Byte
+    $ByteData = [System.Convert]::FromBase64String($Data)
+    
+    $RawData = [System.Text.Encoding]::ASCII.GetString($ByteData)
+
+    $RawData
 }
