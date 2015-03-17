@@ -479,3 +479,27 @@ function Set-DscMetaConfig {
         Set-DscLocalConfigurationManager -Path $Using:LocalBasePath -ComputerName localhost
     }
 }
+
+#TODO
+function New-DscPackage {
+    Get-Content (Join-Path -Path $PSScriptRoot -ChildPath 'Configuration.psm1') | foreach {
+        if ($_ -imatch 'import-dscresource( -module(name)?)? ([^\s]+)') {
+            $ModuleName = $Matches[3]
+            $SourcePath = Join-Path -Path 'C:\Program Files\WindowsPowerShell\Modules' -ChildPath $ModuleName
+
+            Copy-Item -Path $SourcePath -Destination .\$ModuleName -Recurse -Force
+        }
+    }
+}
+
+#TODO
+function Set-DscPackage {
+    Get-ChildItem -Path $PSScriptRoot -Directory | foreach {
+        $ModuleName = $Name
+        $DestinationPath = Join-Path -Path 'C:\Program Files\WindowsPowerShell\Modules' -ChildPath $ModuleName
+
+        Copy-Item -Path $_ -Destination $DestinationPath -Recurse -Force
+    }
+    Copy-Item -Path .\cVMSwitch.psm1 -Destination 'C:\Program Files\WindowsPowerShell\Modules\cHyper-V\DSCResources\cVMSwitch' -Force
+    Restart-Service -Name Winmgmt -Force
+}
