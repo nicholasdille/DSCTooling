@@ -1,4 +1,17 @@
 ﻿function ConvertTo-Base64 {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Data
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([string])]
     param(
@@ -34,6 +47,19 @@
 }
 
 function ConvertFrom-Base64 {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Data
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([string])]
     param(
@@ -56,6 +82,19 @@ function ConvertFrom-Base64 {
 }
 
 function ConvertTo-UnattendXmlPassword {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Password
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([string])]
     param(
@@ -69,6 +108,19 @@ function ConvertTo-UnattendXmlPassword {
 }
 
 function ConvertFrom-UnattendXmlPassword {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Password
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([string])]
     param(

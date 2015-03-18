@@ -1,8 +1,24 @@
 function ConvertFrom-Pson {
+    <#
+    .SYNOPSIS
+    Import a data structure in PowerShell Object Notation
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    Path of input file
+
+    .EXAMPLE
+    ConvertFrom-Pson -Path .\data.psd1
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
-    [OutputType([string])]
+    [OutputType([System.Object])]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
         $Path

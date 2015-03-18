@@ -1,14 +1,35 @@
 ﻿function Convert-RemoteFilePath {
+    <#
+    .SYNOPSIS
+    Convert a file path to UNC
+
+    .PARAMETER FilePath
+    Path to a local file
+
+    .PARAMETER ComputerName
+    Computer name used in the UNC path (defaults to $Env:ComputerName)
+
+    .PARAMETER DomainName
+    Domain name used in the UNC path (defaults to $Env:UserDnsDomain)
+
+    .EXAMPLE
+    Convert-RemoteFilePath -FilePath c:\Windows\System32\cmd.exe
+    #>
     [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
         $FilePath
         ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]
         $ComputerName = $env:COMPUTERNAME
         ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
         [string]
         $DomainName = $env:USERDNSDOMAIN
     )
@@ -18,6 +39,37 @@
 }
 
 function Copy-VMFileRemotely {
+    <#
+    .SYNOPSIS
+    Transfers a file to a virtual machine
+
+    .DESCRIPTION
+    This function uses the guest service integration to transfer the file. The transfer is initiated on the Hyper-V host
+
+    .PARAMETER ComputerName
+    Hyper-V host
+
+    .PARAMETER CredentialName
+    Name of credential
+
+    .PARAMETER Session
+    Session configuration for connecting to Hyper-V host
+
+    .PARAMETER VmName
+    Name of the VM to receive the files
+
+    .PARAMETER Files
+    Array of files to transfer into the VM
+
+    .PARAMETER DestinationPath
+    Destination path inside the VM
+
+    .EXAMPLE
+    Copy-VMFileRemotely -ComputerName hv-01 -CredentialName 'administrator@example.com' -VmName DSC-01 -Files (gci .) -DestinationPath c:\dsc
+
+    .NOTES
+    This cmdlet relys on the credential cmdlets of this module and requires CredSSP to be configured on the Hyper-V host if the source files reside on a file share
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -68,7 +120,36 @@ function Copy-VMFileRemotely {
 }
 
 function New-PsRemoteSession {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    Hyper-V host
+
+    .PARAMETER CredentialName
+    Name of credential
+
+    .PARAMETER UseCredSsp
+    Whether the connection uses CredSSP
+
+    .EXAMPLE
+    New-PsRemoteSession -ComputerName hv-01
+
+    .EXAMPLE
+    New-PsRemoteSession -ComputerName hv-01 -CredentialName 'administrator@example.com'
+
+    .EXAMPLE
+    New-PsRemoteSession -ComputerName hv-01 -CredentialName 'administrator@example.com' -UseCredSsp
+
+    .NOTES
+    This cmdlet relys on the credential cmdlets of this module
+    #>
     [CmdletBinding()]
+    [OutputType([System.Management.Automation.Runspaces.PSSession])]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -86,7 +167,7 @@ function New-PsRemoteSession {
     )
 
     if ($UseCredSsp -And -Not $CredentialName) {
-        throw 'When using CredSSP credentials must be specified. Aborting.'
+        throw ('[{0}] When using CredSSP credentials must be specified. Aborting.' -f $MyInvocation.MyCommand)
     }
 
     $params = @{}
@@ -96,13 +177,47 @@ function New-PsRemoteSession {
 
     $Session = New-PSSession @params
     if (-Not $Session) {
-        throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
+        throw ('[{0}] Failed to create PowerShell remote session to <{1}>. Aborting.' -f $MyInvocation.MyCommand, $ComputerName)
     }
 
     $Session
 }
 
 function Enter-PsRemoteSession {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    Hyper-V host
+
+    .PARAMETER CredentialName
+    Name of credential
+
+    .PARAMETER UseCredSsp
+    Whether the connection uses CredSSP
+
+    .PARAMETER Session
+    XXX
+
+    .EXAMPLE
+    Enter-PsRemoteSession -ComputerName hv-01
+
+    .EXAMPLE
+    Enter-PsRemoteSession -ComputerName hv-01 -CredentialName 'administrator@example.com'
+
+    .EXAMPLE
+    Enter-PsRemoteSession -ComputerName hv-01 -CredentialName 'administrator@example.com' -UseCredSsp
+
+    .EXAMPLE
+    Enter-PsRemoteSession -Session $session
+
+    .NOTES
+    This cmdlet relys on the credential cmdlets of this module
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -132,7 +247,30 @@ function Enter-PsRemoteSession {
 }
 
 function New-SimpleCimSession {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    Hyper-V host
+
+    .PARAMETER CredentialName
+    Name of credential
+
+    .EXAMPLE
+    New-SimpleCimSession -ComputerName hv-01
+
+    .EXAMPLE
+    New-SimpleCimSession -ComputerName hv-01 -CredentialName 'administrator@example.com'
+
+    .NOTES
+    This cmdlet relys on the credential cmdlets of this module
+    #>
     [CmdletBinding()]
+    [OutputType([Microsoft.Management.Infrastructure.CimSession])]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -151,20 +289,55 @@ function New-SimpleCimSession {
 
     $CimSession = New-CimSession @params
     if (-Not $CimSession) {
-        throw ('Failed to create PowerShell remote session to <{0}>. Aborting.' -f $ComputerName)
+        throw ('[{0}] Failed to create PowerShell remote session to <{1}>. Aborting.' -f $MyInvocation.MyCommand, $ComputerName)
     }
 
     $CimSession
 }
 
 function Copy-ToRemoteItem {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER SourcePath
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER DestinationPath
+    XXX
+
+    .PARAMETER Credential
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $SourcePath
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $ComputerName
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $DestinationPath
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [pscredential]
         $Credential
     )
 
@@ -176,13 +349,48 @@ function Copy-ToRemoteItem {
 }
 
 function Copy-FromRemoteItem {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER SourcePath
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER DestinationPath
+    XXX
+
+    .PARAMETER Credential
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $SourcePath
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $ComputerName
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
         $DestinationPath
         ,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [pscredential]
         $Credential
     )
 

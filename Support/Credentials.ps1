@@ -1,21 +1,58 @@
 ﻿function Get-CredentialFromStore {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER CredentialStore
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
+    [OutputType([pscredential])]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
         $CredentialName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
-        $CredentialStore = $PSDSC_CredPath
+        $CredentialStore
     )
 
-    Import-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml'))
+    $Path = Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml')
+    Import-Clixml -Path $Path
 }
 
 function New-CredentialInStore {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER Credential
+    XXX
+
+    .PARAMETER CredentialStore
+    XXX
+
+    .EXAMPLE
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -28,11 +65,12 @@ function New-CredentialInStore {
         [pscredential]
         $Credential
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
-        $CredentialStore = $PSDSC_CredPath
+        $CredentialStore
     )
 
-    $Credential | Export-Clixml -Path (Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml'))
+    $Path = Join-Path -Path $CredentialStore -ChildPath ($CredentialName + '.clixml')
+    $Credential | Export-Clixml -Path $Path
 }
