@@ -1,5 +1,4 @@
-﻿#TODO
-function New-DscNode {
+﻿function New-DscNode {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -51,7 +50,74 @@ function New-DscNode {
     #endregion output
 }
 
+function Find-DscResourceInUse {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
+    Get-Content (Join-Path -Path $PSScriptRoot -ChildPath 'Configuration.psm1') | foreach {
+        if ($_ -imatch 'import-dscresource( -module(name)?)? ([^\s]+)') {
+            $ModuleName = $Matches[3]
+            $SourcePath = Join-Path -Path 'C:\Program Files\WindowsPowerShell\Modules' -ChildPath $ModuleName
+
+            Copy-Item -Path $SourcePath -Destination .\$ModuleName -Recurse -Force
+        }
+    }
+}
+
+function Publish-DscResourceArchiveToPullServer {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
+
+    #
+}
+
 function New-DscResourceArchive {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ModuleName
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    New-DscResourceArchive -ModuleName xActiveDirectory -Path .
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -63,37 +129,92 @@ function New-DscResourceArchive {
         [ValidateNotNullOrEmpty()]
         [string]
         $Path
+        ,
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $ModulePath = 'C:\Program Files\WindowsPowerShell\Modules'
     )
 
-    $DscModulePath = 'C:\Program Files\WindowsPowerShell\Modules'
-    $ModuleVersion = Get-Module -ListAvailable | Where-Object Name -ieq $ModuleName | Select-Object -ExpandProperty Version
-    $ModulePath = Get-ChildItem $DscModulePath | Where-Object Name -ieq $ModuleName
+    Write-Verbose ('[{0}] Archiving module {1} to path {2} (from module path {2}' -f $MyInvocation.MyCommand, $ModuleName, $Path, $ModulePath)
 
-    $ArchivePath = Join-Path -Path $Path -ChildPath ('{0}_{1}.zip' -f $ModuleName, $ModuleVersion)
+    $DscModuleVersion = Get-Module -ListAvailable | Where-Object Name -ieq $ModuleName | Select-Object -ExpandProperty Version
+    Write-Verbose ('[{0}] Found module version {1}' -f $MyInvocation.MyCommand, $DscModuleVersion)
 
-    Compress-Archive -DestinationPath $ArchivePath -Path $ModulePath.FullName -CompressionLevel Optimal
+    $DscModulePath = Get-ChildItem $ModulePath | Where-Object Name -ieq $ModuleName
+    Write-Verbose ('[{0}] Full path to module is {1}' -f $MyInvocation.MyCommand, $DscModulePath)
+
+    $FileName = '{0}_{1}.zip' -f $ModuleName, $DscModuleVersion
+    Write-Verbose ('[{0}] Archive name is {1}' -f $MyInvocation.MyCommand, $FileName)
+
+    $ArchivePath = Join-Path -Path $Path -ChildPath $FileName
+    Write-Verbose ('[{0}] Full path to archive is {1}' -f $MyInvocation.MyCommand, $ArchivePath)
+
+    Compress-Archive -DestinationPath $ArchivePath -Path $DscModulePath.FullName -CompressionLevel Optimal
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
 
 function Convert-DscMetaConfigurations {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string]$Path
+        [string]
+        $Path
     )
+
+    Write-Verbose ('[{0}] Processing MOF files in {1}' -f $MyInvocation.MyCommand, $Path)
     
     Get-ChildItem -Path $Path | Where-Object { $_.Name -imatch '\.meta\.mof$' } | foreach {
+        Write-Verbose ('[{0}] Processing file {1}' -f $MyInvocation.MyCommand, $_.FullName)
         Convert-DscMetaConfiguration -MofFullName $_.FullName
     }
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
 
 function Convert-DscMetaConfiguration {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]$MofFullName
     )
+
+    Write-Verbose ('[{0}] Processing MOF file {1}' -f $MyInvocation.MyCommand)
     
     $IncludeLine = $True
     $MofContent = Get-Content -Path $_.FullName | foreach {
@@ -115,12 +236,29 @@ function Convert-DscMetaConfiguration {
             $Line
         }
     }
+    Write-Verbose ('[{0}] Writing corrected MOF to file {1}' -f $MyInvocation.MyCommand, $_.FullName)
     $MofContent | Set-Content -Path $_.FullName
 }
 
-#TODO
 function New-DscNodeConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
     param(
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -153,6 +291,22 @@ function New-DscNodeConfig {
 }
 
 function Build-DscNodeArray {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([System.Array])]
     param(
@@ -208,6 +362,22 @@ function Build-DscNodeArray {
 }
 
 function Build-DscCredentialsArray {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([System.Collections.Hashtable])]
     param(
@@ -216,6 +386,8 @@ function Build-DscCredentialsArray {
         [string]
         $CredPath = (Join-Path -Path $PSScriptRoot -ChildPath 'Cred')
     )
+
+    Write-Verbose ('[{0}] Collecting credentials from directory {1}' -f $MyInvocation.MyCommand, $CredPath)
 
     $Credentials = @{}
     Get-ChildItem -Recurse $CredPath | Where-Object Name -like '*.clixml' | ForEach-Object {
@@ -230,6 +402,22 @@ function Build-DscCredentialsArray {
 }
 
 function Build-DscConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     [OutputType([System.Collections.Hashtable])]
     param(
@@ -253,6 +441,8 @@ function Build-DscConfig {
         [string[]]
         $Filter
     )
+
+    Write-Verbose ('[{0}] Building configuration data' -f $MyInvocation.MyCommand)
 
     $ConfigData = @{
         AllNodes = @()
@@ -279,6 +469,22 @@ function Build-DscConfig {
 }
 
 function Invoke-DscConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
@@ -323,9 +529,27 @@ function Invoke-DscConfig {
 
     Write-Verbose ('[{0}] Invoking node configuration' -f $MyInvocation.MyCommand)
     MasterConfiguration -OutputPath $OutputPath -ConfigurationData $ConfigData
+
+    Write-Verbose ('[{0}] Done')
 }
 
 function Push-DscConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -343,17 +567,38 @@ function Push-DscConfig {
         [string]
         $CredentialName
     )
-    Assert-BasePath
+
+    Write-Verbose ('[{0}] Pushing configuration from path {1} to computer {2}' -f $MyInvocation.MyCommand, $Path, $ComputerName)
 
     if ($CredentialName) {
+        Write-Verbose ('[{0}] Using credentials {1}' -f $MyInvocation.MyCommand, $CredentialName)
         Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose -Credential (Get-CredentialFromStore -CredentialName $CredentialName)
 
     } else {
+        Write-Verbose ('[{0}] Not using credentials' -f $MyInvocation.MyCommand)
         Start-DscConfiguration -ComputerName $ComputerName -Path $Path -Wait -Verbose
     }
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
 
 function Publish-DscConfigToPullServer {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -362,12 +607,36 @@ function Publish-DscConfigToPullServer {
         $ComputerName
     )
 
+    Write-Verbose ('[{0}] Publishing node configurations from output path {1} to pull server {2}' -f $MyInvocation.MyCommand, $PSDSC_OutputPath, $ComputerName)
+
+    $RemotePath = '\\{0}\c$\Program Files\WindowsPowershell\DscService\Configuration' -f $ComputerName
+    Write-Verbose ('[{0}] Using remote path {1}' -f $MyInvocation.MyCommand, $RemotePath)
+
     Get-ChildItem -Path "$PSDSC_OutputPath" | Where-Object { $_.Name -imatch '^(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\.mof(\.checksum)?$' } | foreach {
-        Copy-Item -Path "$($_.FullName)" -Destination ('\\{0}\c$\Program Files\WindowsPowershell\DscService\Configuration' -f $ComputerName) -Force
+        Write-Verbose ('[{0}] Publishing configuration {1}' -f $MyInvocation.MyCommand, $_.FullName)
+        Copy-Item -Path "$($_.FullName)" -Destination $RemotePath -Force
     }
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
 
 function Invoke-CommandOnFile {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -423,6 +692,22 @@ function Invoke-CommandOnFile {
 }
 
 function Set-DscMetaConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER Path
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -478,28 +763,4 @@ function Set-DscMetaConfig {
         Get-ChildItem $Using:LocalBasePath\*.meta.mof | Where-Object { $_.BaseName -notmatch 'localhost.meta.mof' } | Select-Object -First 1 | Rename-Item -NewName localhost.meta.mof -ErrorAction SilentlyContinue
         Set-DscLocalConfigurationManager -Path $Using:LocalBasePath -ComputerName localhost
     }
-}
-
-#TODO
-function New-DscPackage {
-    Get-Content (Join-Path -Path $PSScriptRoot -ChildPath 'Configuration.psm1') | foreach {
-        if ($_ -imatch 'import-dscresource( -module(name)?)? ([^\s]+)') {
-            $ModuleName = $Matches[3]
-            $SourcePath = Join-Path -Path 'C:\Program Files\WindowsPowerShell\Modules' -ChildPath $ModuleName
-
-            Copy-Item -Path $SourcePath -Destination .\$ModuleName -Recurse -Force
-        }
-    }
-}
-
-#TODO
-function Set-DscPackage {
-    Get-ChildItem -Path $PSScriptRoot -Directory | foreach {
-        $ModuleName = $Name
-        $DestinationPath = Join-Path -Path 'C:\Program Files\WindowsPowerShell\Modules' -ChildPath $ModuleName
-
-        Copy-Item -Path $_ -Destination $DestinationPath -Recurse -Force
-    }
-    Copy-Item -Path .\cVMSwitch.psm1 -Destination 'C:\Program Files\WindowsPowerShell\Modules\cHyper-V\DSCResources\cVMSwitch' -Force
-    Restart-Service -Name Winmgmt -Force
 }

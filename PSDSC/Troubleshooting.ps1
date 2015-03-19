@@ -1,4 +1,26 @@
 ﻿function Get-DscMetaConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER CimSession
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -17,13 +39,44 @@
         $CimSession
     )
 
+    Write-Verbose ('[{0}] Retrieving meta configuration' -f $MyInvocation.MyCommand)
+
     if (-Not $CimSession) {
+        Write-Verbose ('[{0}] Connecting to computer {1}' -f $MyInvocation.MyCommand, $ComputerName)
         $CimSession = New-SimpleCimSession @PSBoundParameters
     }
-    Get-DscLocalConfigurationManager -CimSession $CimSession
+    Write-Verbose ('[{0}] Using CIM session to computer {1}' -f $MyInvocation.MyCommand, $CimSession.ComputerName)
+
+    Write-Verbose ('[{0}] Retrieving meta configuration' -f $MyInvocation.MyCommand)
+    $MetaConfig = Get-DscLocalConfigurationManager -CimSession $CimSession
+
+    Write-Verbose ('[{0}] Done and returning meta configuration' -f $MyInvocation.MyCommand)
+    $MetaConfig
 }
 
 function Get-DscConfig {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER CimSession
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -42,13 +95,44 @@ function Get-DscConfig {
         $CimSession
     )
 
+    Write-Verbose ('[{0}] Retrieving node configuration' -f $MyInvocation.MyCommand)
+
     if (-Not $CimSession) {
+        Write-Verbose ('[{0}] Connecting to computer {1}' -f $MyInvocation.MyCommand, $ComputerName)
         $CimSession = New-SimpleCimSession @PSBoundParameters
     }
-    Get-DscConfiguration -CimSession $CimSession
+    Write-Verbose ('[{0}] Using CIM session to computer {1}' -f $MyInvocation.MyCommand, $CimSession.ComputerName)
+
+    Write-Verbose ('[{0}] Retrieving meta configuration' -f $MyInvocation.MyCommand)
+    $NodeConfig = Get-DscConfiguration -CimSession $CimSession
+
+    Write-Verbose ('[{0}] Done and returning node configuration' -f $MyInvocation.MyCommand)
+    $NodeConfig
 }
 
 function Invoke-ConfigCheck {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER CimSession
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -71,29 +155,57 @@ function Invoke-ConfigCheck {
         $Type
     )
 
+    Write-Verbose ('[{0}] Initiating configuration check' -f $MyInvocation.MyCommand)
+
     $Flags = @{
         UnknownFlag1 = 1
         UnknownFlag2 = 2
         UnknownFlag3 = 3
     }
 
+    if (-Not $CimSession) {
+        Write-Verbose ('[{0}] Connecting to computer {1}' -f $MyInvocation.MyCommand, $ComputerName)
+        $PSBoundParameters.Remove('Type')
+        $CimSession = New-SimpleCimSession @PSBoundParameters
+    }
+    Write-Verbose ('[{0}] Using CIM session to computer {1}' -f $MyInvocation.MyCommand, $CimSession.ComputerName)
+
+    Write-Verbose ('[{0}] Invoking CIM method' -f $MyInvocation.MyCommand)
     $params = @{
         Namespace  = 'root/Microsoft/Windows/DesiredStateConfiguration'
         ClassName  = 'MSFT_DSCLocalConfigurationManager'
         MethodName = 'PerformRequiredConfigurationChecks'
         Arguments  = @{Flags = [System.UInt32]$Flags.$Type}
+        CimSession = $CimSession
     }
-
-    if (-Not $CimSession) {
-        $PSBoundParameters.Remove('Type')
-        $CimSession = New-SimpleCimSession @PSBoundParameters
-    }
-    $params.Add('CimSession', $CimSession)
-
     Invoke-CimMethod @params
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
 
 function Invoke-ConsistencyTask {
+    <#
+    .SYNOPSIS
+    XXX
+
+    .DESCRIPTION
+    XXX
+
+    .PARAMETER ComputerName
+    XXX
+
+    .PARAMETER CredentialName
+    XXX
+
+    .PARAMETER CimSession
+    XXX
+
+    .EXAMPLE
+    XXX
+
+    .NOTES
+    XXX
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Computer')]
@@ -112,8 +224,16 @@ function Invoke-ConsistencyTask {
         $CimSession
     )
 
+    Write-Verbose ('[{0}] Initiating configuration check' -f $MyInvocation.MyCommand)
+
     if (-Not $CimSession) {
+        Write-Verbose ('[{0}] Connecting to computer {1}' -f $MyInvocation.MyCommand, $ComputerName)
         $CimSession = New-SimpleCimSession @PSBoundParameters
     }
+    Write-Verbose ('[{0}] Using CIM session to computer {1}' -f $MyInvocation.MyCommand, $CimSession.ComputerName)
+
+    Write-Verbose ('[{0}] Initiating configuration check' -f $MyInvocation.MyCommand)
     Get-ScheduledTask -CimSession $CimSession -TaskName Consistency | Start-ScheduledTask
+
+    Write-Verbose ('[{0}] Done' -f $MyInvocation.MyCommand)
 }
