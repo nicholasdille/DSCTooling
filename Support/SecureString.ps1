@@ -81,7 +81,7 @@ function Get-PlaintextFromSecureString {
     [CmdletBinding()]
     [OutputType([string])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [ValidateNotNullOrEmpty()]
         [Security.SecureString]
         $SecureString
