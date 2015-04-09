@@ -1,10 +1,7 @@
-/Output*
+/Output/*
 /Temp/*
 /Cert/*.pfx
 /Cred/*.clixml
 /Injection/*
 /Examples/*
-/DSC-Modules/*
-/Modules/*
 /*.mof
-/DSC Resource Kit Wave *.zip
