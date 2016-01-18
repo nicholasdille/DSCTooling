@@ -25,3 +25,4 @@
 *.psm1	-text diff merge
 *.psd1	-text diff merge
 *.mof	-text diff merge
+*.clixml	-text diff merge
