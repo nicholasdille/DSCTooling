@@ -2,7 +2,7 @@
     param()
 
     #region Import resources
-    Import-DSCResource -ModuleName xPSDesiredStateConfiguration
+    Import-DSCResource -ModuleName PSDesiredStateConfiguration
     Import-DscResource -ModuleName xComputerManagement
     Import-DscResource -ModuleName xHyper-V
     Import-DscResource -ModuleName cHyper-V
@@ -98,22 +98,6 @@
         xPowerShellExecutionPolicy ExecutionPolicy {
             ExecutionPolicy = 'RemoteSigned'
         }
-        #endregion
-
-        #region Wave Deployment
-        <#File WaveDeploy_Copy {
-            Ensure = 'Present'
-            SourcePath = '\\demo.dille.name\storage\install\Microsoft\Desired State Configuration\DSC Resource Kit Wave 8 10282014.zip'
-            DestinationPath = 'C:\Windows\Temp'
-            Credential = (Import-Clixml -Path $ConfigurationData.Credentials['administrator@demo.dille.name'])
-        }
-
-        Archive WaveDeploy_Unpack {
-            Ensure = 'Present'
-            Path = 'C:\Windows\Temp\DSC Resource Kit Wave 8 10282014.zip'
-            Destination = 'C:\Program Files\WindowsPowerShell\Modules'
-            DependsOn = '[File]WaveDeploy_Copy'
-        }#>
         #endregion
         
         #region WindowsFeature
